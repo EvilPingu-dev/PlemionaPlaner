@@ -60,6 +60,10 @@ if %errorlevel% neq 0 (
 echo        Python OK.
 echo.
 
+:: Force UTF-8 everywhere on Windows (fixes charmap encoding errors)
+set PYTHONUTF8=1
+set PYTHONIOENCODING=utf-8
+
 :: [3/3] Biblioteki
 echo  [3/3] Sprawdzanie bibliotek...
 uv sync --quiet 2>nul

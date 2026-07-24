@@ -4,6 +4,10 @@ import sys
 import threading
 import webbrowser
 
+# Force UTF-8 on Windows — prevents charmap codec errors with Polish characters
+os.environ.setdefault("PYTHONUTF8", "1")
+os.environ.setdefault("PYTHONIOENCODING", "utf-8")
+
 from app import create_app
 
 
