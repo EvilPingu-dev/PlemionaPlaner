@@ -161,3 +161,4 @@ document.querySelectorAll('.btn-copy-script').forEach(btn => {
 document.getElementById('btn-dc-save').addEventListener('click',  saveDiscordConfig);
 document.getElementById('btn-dc-start').addEventListener('click', startDiscordBot);
 document.getElementById('btn-dc-stop').addEventListener('click',  stopDiscordBot);
+document.getElementById('btn-dc-test').addEventListener('click',  testDiscordBot);

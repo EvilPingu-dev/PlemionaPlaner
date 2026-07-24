@@ -83,3 +83,15 @@ function _startBotPolling() {
 function _stopBotPolling() {
     if (_dcPollingId) { clearInterval(_dcPollingId); _dcPollingId = null; }
 }
+
+async function testDiscordBot() {
+    const msg = document.getElementById('dc-status-msg');
+    setStatus(msg, 'Wysylanie testu...');
+    const res  = await fetch('/api/discord/test', { method: 'POST' });
+    const data = await res.json();
+    if (res.ok) {
+        setStatus(msg, '✓ Wiadomosc testowa wyslana na kanal!', 'ok');
+    } else {
+        setStatus(msg, data.error || 'Blad wysylania testu.', 'err');
+    }
+}

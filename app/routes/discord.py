@@ -60,6 +60,32 @@ def discord_stop():
     return jsonify({"ok": True, "running": False})
 
 
+@bp.post("/api/discord/test")
+def discord_test():
+    from ..discord_bot import _bot_client
+    if not bot_running() or not _bot_client:
+        return jsonify({"error": "Bot nie jest uruchomiony. Najpierw go uruchom."}), 400
+
+    import asyncio
+    from ..discord_bot import _bot_loop
+
+    async def _send():
+        channel = _bot_client.get_channel(_bot_client.channel_id)
+        if not channel:
+            return False
+        await channel.send("🧪 **Test Planera Akcji** – bot działa poprawnie! Przypomnienia będą wysyłane na ten kanał.")
+        return True
+
+    future = asyncio.run_coroutine_threadsafe(_send(), _bot_loop)
+    try:
+        ok = future.result(timeout=10)
+        if ok:
+            return jsonify({"ok": True})
+        return jsonify({"error": "Nie znaleziono kanału. Sprawdź ID kanału."}), 400
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 @bp.get("/api/discord/status")
 def discord_status():
     return jsonify({"running": bot_running()})
