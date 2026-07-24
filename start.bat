@@ -2,21 +2,25 @@
 title Planer Akcji – Plemiona
 cd /d "%~dp0"
 
-:: ── Auto-update from GitHub ──────────────────────────────────────────────────
+:: ── Auto-update ──────────────────────────────────────────────────────────────
+echo  [INFO] Sprawdzanie aktualizacji...
+
 where git >nul 2>&1
 if %errorlevel% == 0 (
-    echo  [INFO] Sprawdzanie aktualizacji...
+    :: Git available – fast pull
     git fetch origin main --quiet 2>nul
     for /f %%i in ('git rev-list HEAD..origin/main --count 2^>nul') do set BEHIND=%%i
     if defined BEHIND if "%BEHIND%" neq "0" (
         echo  [INFO] Znaleziono %BEHIND% nowe aktualizacje – pobieranie...
         git pull origin main --quiet 2>nul
-        echo  [OK] Zaktualizowano do najnowszej wersji.
-        echo.
+        echo  [OK] Zaktualizowano.
     )
 ) else (
-    echo  [INFO] Git nie znaleziony – pomijam sprawdzanie aktualizacji.
+    :: No git – download ZIP via PowerShell and extract (overwrites code, keeps data\)
+    powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+        "$zip='%TEMP%\PlanerUpdate.zip'; $dest='%TEMP%\PlanerUpdate'; $repo='https://github.com/EvilPingu-dev/PlemionaPlaner/archive/refs/heads/main.zip'; try { Invoke-WebRequest $repo -OutFile $zip -UseBasicParsing -ErrorAction Stop } catch { exit 0 }; if (Test-Path $dest) { Remove-Item $dest -Recurse -Force }; Expand-Archive $zip $dest -Force; $src=Join-Path $dest 'PlemionaPlaner-main'; Get-ChildItem $src | Where-Object { $_.Name -ne 'data' } | ForEach-Object { $t=Join-Path '%~dp0' $_.Name; if (Test-Path $t) { Remove-Item $t -Recurse -Force }; Copy-Item $_.FullName $t -Recurse -Force }; Write-Host '[OK] Zaktualizowano.'"
 )
+echo.
 
 :: ── Check for uv ────────────────────────────────────────────────────────────
 where uv >nul 2>&1
