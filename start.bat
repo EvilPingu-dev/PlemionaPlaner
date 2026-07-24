@@ -10,23 +10,31 @@ echo.
 
 :: [1/3] Auto-update
 echo  [1/3] Sprawdzanie aktualizacji z GitHub...
+set BEHIND=0
 
 where git >nul 2>&1
 if %errorlevel% == 0 (
-    git fetch origin main --quiet 2>nul
+    echo        Git znaleziony - lacze z GitHub...
+    git fetch origin main 2>nul
+    if %errorlevel% neq 0 (
+        echo        Brak polaczenia z GitHub - pomijam aktualizacje.
+        goto update_done
+    )
     for /f %%i in ('git rev-list HEAD..origin/main --count 2^>nul') do set BEHIND=%%i
-    if defined BEHIND if "%BEHIND%" neq "0" (
-        echo        Znaleziono %BEHIND% nowe aktualizacje!
-        echo        Pobieranie...
+    if "%BEHIND%"=="0" (
+        echo        Aplikacja jest aktualna.
+    ) else (
+        echo        Znaleziono %BEHIND% nowe aktualizacje - pobieranie...
         git pull origin main
         echo        Gotowe - aplikacja zaktualizowana.
-    ) else (
-        echo        Aplikacja jest aktualna.
     )
+    goto update_done
 ) else (
     echo        Brak git - pobieranie ZIP z GitHub...
     powershell -NoProfile -ExecutionPolicy Bypass -Command "$zip='%TEMP%\PlanerUpdate.zip'; $dest='%TEMP%\PlanerUpdate'; $repo='https://github.com/EvilPingu-dev/PlemionaPlaner/archive/refs/heads/main.zip'; try { Write-Host '       Pobieranie plikow...'; Invoke-WebRequest $repo -OutFile $zip -UseBasicParsing -ErrorAction Stop; Write-Host '       Rozpakowywanie...'; if (Test-Path $dest) { Remove-Item $dest -Recurse -Force }; Expand-Archive $zip $dest -Force; $src=Join-Path $dest 'PlemionaPlaner-main'; Write-Host '       Instalowanie aktualizacji...'; Get-ChildItem $src | Where-Object { $_.Name -ne 'data' } | ForEach-Object { $t=Join-Path '%~dp0' $_.Name; if (Test-Path $t) { Remove-Item $t -Recurse -Force }; Copy-Item $_.FullName $t -Recurse -Force }; Write-Host '       Gotowe - aplikacja zaktualizowana.' } catch { Write-Host '       Brak internetu lub problem z GitHub - pomijam aktualizacje.' }"
 )
+
+:update_done
 echo.
 
 :: [2/3] Python / uv
