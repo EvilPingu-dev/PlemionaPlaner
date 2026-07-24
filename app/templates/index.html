@@ -646,15 +646,22 @@ void 0;</pre>
         <div id="dc-bot-status" style="margin-top:.8rem;font-size:.9rem"></div>
     </div>
     <div class="card">
-        <h3>Jak skonfigurować bota?</h3>
-        <ol style="line-height:2">
-            <li>Wejdź na <a href="https://discord.com/developers/applications" target="_blank">discord.com/developers/applications</a></li>
-            <li>Kliknij <strong>New Application</strong>, nadaj nazwę (np. <em>PlanerAkcji</em>)</li>
-            <li>Przejdź do zakładki <strong>Bot</strong> → <strong>Reset Token</strong> → skopiuj token</li>
-            <li>Włącz uprawnienie <strong>Send Messages</strong> w sekcji Bot Permissions</li>
-            <li>Zaproś bota do serwera przez <strong>OAuth2 → URL Generator</strong> (scope: bot, permission: Send Messages)</li>
-            <li>ID kanału: prawy klik na kanał → <strong>Kopiuj ID kanału</strong> (włącz tryb dewelopera w ustawieniach Discorda)</li>
+        <h3>Jak skonfigurować bota? (krok po kroku)</h3>
+        <ol style="line-height:2.2">
+            <li>Wejdź na <a href="https://discord.com/developers/applications" target="_blank" style="color:#5865f2">discord.com/developers/applications</a> (zaloguj się kontem Discord)</li>
+            <li>Kliknij niebieski przycisk <strong>New Application</strong> → wpisz nazwę np. <em>PlanerAkcji</em> → <strong>Create</strong></li>
+            <li>W lewym menu kliknij <strong>Bot</strong></li>
+            <li>Kliknij <strong>Reset Token</strong> → potwierdź → skopiuj token (długi ciąg liter/cyfr) → wklej go powyżej w pole <em>Token bota</em></li>
+            <li>Na tej samej stronie przewiń w dół do <strong>Privileged Gateway Intents</strong> → włącz <strong>Message Content Intent</strong></li>
+            <li>W lewym menu kliknij <strong>OAuth2</strong> → <strong>OAuth2 URL Generator</strong></li>
+            <li>W sekcji <strong>Scopes</strong> zaznacz: <strong>bot</strong></li>
+            <li>W sekcji <strong>Bot Permissions</strong> która się pojawi zaznacz: <strong>Send Messages</strong></li>
+            <li>Na dole strony skopiuj wygenerowany URL i otwórz go w przeglądarce</li>
+            <li>Wybierz swój serwer Discord z listy → kliknij <strong>Authorize</strong> → potwierdź captcha</li>
+            <li>Bot pojawi się teraz na liście członków serwera</li>
+            <li><strong>ID kanału:</strong> w Discordzie: Ustawienia → Zaawansowane → włącz <strong>Tryb dewelopera</strong> → prawy klik na kanał → <strong>Kopiuj ID kanału</strong></li>
         </ol>
+        <p class="hint" style="margin-top:.5rem">Po skonfigurowaniu: wklej token + ID kanału powyżej → <strong>Zapisz</strong> → <strong>Uruchom bota</strong> → <strong>Wyślij test</strong></p>
     </div>
 </section>
 
