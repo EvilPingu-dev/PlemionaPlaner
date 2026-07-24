@@ -44,6 +44,7 @@
     <button class="tab-btn"        data-tab="forum"    role="tab">💬 Forum</button>
     <button class="tab-btn"        data-tab="tools"    role="tab">🛠 Narzędzia</button>
     <button class="tab-btn"        data-tab="status"   role="tab">📡 Status akcji</button>
+    <button class="tab-btn"        data-tab="discord"  role="tab">🤖 Discord Bot</button>
     <button class="tab-btn"        data-tab="settings" role="tab">⚙ Ustawienia</button>
 </nav>
 
@@ -618,6 +619,44 @@ void 0;</pre>
     </div>
 </section>
 
+<!-- TAB: DISCORD BOT -->
+<section id="tab-discord" class="tab-pane" role="tabpanel">
+    <div class="card">
+        <h2>🤖 Discord – Przypomnienia wysyłek</h2>
+        <p class="hint">Bot wyśle wiadomość na kanał Discord X minut przed każdą wysyłką z rozpiski.<br>
+        Potrzebujesz: tokena bota (Discord Developer Portal) + ID kanału.</p>
+        <div class="form-grid">
+            <label>Token bota
+                <input type="password" id="dc-token" placeholder="Bot token (zostaje lokalnie)" autocomplete="off">
+            </label>
+            <label>ID kanału (skopiuj z Discorda)
+                <input type="number" id="dc-channel-id" placeholder="np. 1234567890123456789">
+            </label>
+            <label>Przypomnienie X minut przed wysyłką
+                <input type="number" id="dc-reminder-mins" value="15" min="1" max="120">
+            </label>
+        </div>
+        <div class="btn-row" style="margin-top:1rem">
+            <button class="btn btn-primary" id="btn-dc-save">💾 Zapisz konfigurację</button>
+            <button class="btn btn-success" id="btn-dc-start">▶ Uruchom bota</button>
+            <button class="btn" id="btn-dc-stop" style="background:var(--red);color:#fff">⏹ Zatrzymaj bota</button>
+            <span class="status-msg" id="dc-status-msg"></span>
+        </div>
+        <div id="dc-bot-status" style="margin-top:.8rem;font-size:.9rem"></div>
+    </div>
+    <div class="card">
+        <h3>Jak skonfigurować bota?</h3>
+        <ol style="line-height:2">
+            <li>Wejdź na <a href="https://discord.com/developers/applications" target="_blank">discord.com/developers/applications</a></li>
+            <li>Kliknij <strong>New Application</strong>, nadaj nazwę (np. <em>PlanerAkcji</em>)</li>
+            <li>Przejdź do zakładki <strong>Bot</strong> → <strong>Reset Token</strong> → skopiuj token</li>
+            <li>Włącz uprawnienie <strong>Send Messages</strong> w sekcji Bot Permissions</li>
+            <li>Zaproś bota do serwera przez <strong>OAuth2 → URL Generator</strong> (scope: bot, permission: Send Messages)</li>
+            <li>ID kanału: prawy klik na kanał → <strong>Kopiuj ID kanału</strong> (włącz tryb dewelopera w ustawieniach Discorda)</li>
+        </ol>
+    </div>
+</section>
+
 <!-- TAB: STATUS AKCJI -->
 <section id="tab-status" class="tab-pane" role="tabpanel">
     <div class="card">
@@ -630,9 +669,8 @@ void 0;</pre>
             <button class="btn" id="btn-reset-status" style="background:var(--red);color:#fff">🗑 Resetuj statusy</button>
             <span class="status-msg" id="status-tracker-msg"></span>
         </div>
+        <div id="status-live-bar" style="margin-top:.6rem"></div>
     </div>
-
-    <div id="status-player-list"></div>
 
     <div class="card" id="coverage-card" style="display:none">
         <h2>💬 Post zastępstw na forum</h2>
@@ -642,6 +680,8 @@ void 0;</pre>
             <button class="btn btn-sm" id="btn-copy-coverage">📋 Kopiuj</button>
         </div>
     </div>
+
+    <div id="status-player-list"></div>
 </section>
 
 </main>
@@ -655,6 +695,7 @@ void 0;</pre>
 <script src="{{ url_for('static', filename='js/plan-manager.js') }}"></script>
 <script src="{{ url_for('static', filename='js/tools.js') }}"></script>
 <script src="{{ url_for('static', filename='js/status.js') }}"></script>
+<script src="{{ url_for('static', filename='js/discord.js') }}"></script>
 <script src="{{ url_for('static', filename='js/init.js') }}"></script>
 </body>
 </html>

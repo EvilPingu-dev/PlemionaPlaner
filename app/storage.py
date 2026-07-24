@@ -52,8 +52,11 @@ DEFAULT_SETTINGS: dict = {
 
 def load_json(path: Path) -> list | dict:
     if path.exists():
-        with open(path) as f:
-            return json.load(f)
+        try:
+            with open(path, encoding="utf-8") as f:
+                return json.load(f)
+        except (json.JSONDecodeError, OSError):
+            return []
     return []
 
 
@@ -64,7 +67,10 @@ def save_json(path: Path, data) -> None:
 
 def load_settings() -> dict:
     if SETTINGS_FILE.exists():
-        with open(SETTINGS_FILE) as f:
-            saved = json.load(f)
-        return {**DEFAULT_SETTINGS, **saved}
+        try:
+            with open(SETTINGS_FILE, encoding="utf-8") as f:
+                saved = json.load(f)
+            return {**DEFAULT_SETTINGS, **saved}
+        except (json.JSONDecodeError, OSError):
+            pass
     return dict(DEFAULT_SETTINGS)

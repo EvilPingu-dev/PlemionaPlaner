@@ -111,45 +111,66 @@ def coverage_post():
         return jsonify({"bbcode": "", "missed_count": 0,
                         "message": "Brak oznaczonych jako 'missed' ataków."})
 
-    free_offs   = [v for v in villages_d if v["off"]    > 0 and v["coord"] not in all_assigned_coords]
-    free_nobles = [v for v in villages_d if v["nobles"] > 0 and v["coord"] not in all_assigned_coords]
+    # Separate pools — coords will be removed as they get assigned
+    free_offs_set   = {v["coord"] for v in villages_d if v["off"]    > 0 and v["coord"] not in all_assigned_coords}
+    free_nobles_set = {v["coord"] for v in villages_d if v["nobles"] > 0 and v["coord"] not in all_assigned_coords}
+    village_by_c    = {v["coord"]: v for v in villages_d}
+
+    # Group missed attacks by target so we know how many each target needs
+    from collections import defaultdict
+    by_target: dict[str, list[dict]] = defaultdict(list)
+    for ma in missed_attacks:
+        by_target[ma["target"]].append(ma)
+
+    # Sort targets: fewest missed attacks first → maximise fully-covered targets
+    sorted_targets = sorted(by_target.keys(), key=lambda t: len(by_target[t]))
 
     parts = [
         f"[b]Akcja: {action_name} – WYMIENNIKI[/b]",
         "[b]Poniżej lista ataków, które nie zostały wysłane. Prosimy o zastępstwo![/b]",
+        "[i](Kolejność: najpierw cele z najmniejszą liczbą braków – aby zdobyć jak najwięcej.)[/i]",
         "",
     ]
 
-    for ma in missed_attacks:
-        tx, ty = ma["tx"], ma["ty"]
-        pool   = free_nobles if ma["type"] == "SZLACHCIC" else free_offs
-        nearest = sorted(pool, key=lambda v: _dist(v["x"], v["y"], tx, ty))[:3]
+    for tcoord in sorted_targets:
+        attacks = by_target[tcoord]
+        tx, ty  = attacks[0]["tx"], attacks[0]["ty"]
+        parts.append(f"[b]── Cel: [coord]{tcoord}[/coord] ({len(attacks)} brakujących ataków) ──[/b]")
 
-        player_tag = f"[player]{ma['player']}[/player]" if ma["player"] else "?"
-        parts.append(
-            f"[b]Cel: [coord]{ma['target']}[/coord]  |  Typ: {ma['type']}  |  "
-            f"Oryginalna wioska: [coord]{ma['coord']}[/coord] ({player_tag})[/b]"
-        )
+        for ma in attacks:
+            pool_set = free_nobles_set if ma["type"] == "SZLACHCIC" else free_offs_set
+            # pick 3 nearest from still-available pool
+            candidates = sorted(
+                (village_by_c[c] for c in pool_set if c in village_by_c),
+                key=lambda v: _dist(v["x"], v["y"], tx, ty)
+            )[:3]
 
-        if nearest:
-            rows = []
-            for v in nearest:
-                d   = round(_dist(v["x"], v["y"], tx, ty), 1)
-                p   = player_by_coord.get(v["coord"], "")
-                pcol = f"[player]{p}[/player]" if p else "-"
-                from_id = id_map.get(v["coord"])
-                tgt_id  = id_map.get(ma["target"])
-                link = (
-                    f"[url=https://pl{server}.plemiona.pl/game.php?village={from_id}&screen=place&target={tgt_id}]Wyślij[/url]"
-                    if from_id and tgt_id and server else "-"
-                )
-                rows.append(f"[*][coord]{v['coord']}[/coord][|]{pcol}[|]{d} pol[|]{link}")
+            player_tag = f"[player]{ma['player']}[/player]" if ma["player"] else "?"
             parts.append(
-                "[table][**]Zastępstwo[||]Gracz[||]Odl.[||]Link[/**]\n"
-                + "\n".join(rows) + "\n[/table]"
+                f"[b]Typ: {ma['type']}  |  Oryginalna wioska: [coord]{ma['coord']}[/coord] ({player_tag})[/b]"
             )
-        else:
-            parts.append("[color=#cc3333]Brak wolnych wiosek do zastępstwa![/color]")
+
+            if candidates:
+                rows = []
+                for v in candidates:
+                    d     = round(_dist(v["x"], v["y"], tx, ty), 1)
+                    p     = player_by_coord.get(v["coord"], "")
+                    pcol  = f"[player]{p}[/player]" if p else "-"
+                    from_id = id_map.get(v["coord"])
+                    tgt_id  = id_map.get(tcoord)
+                    link = (
+                        f"[url=https://pl{server}.plemiona.pl/game.php?village={from_id}&screen=place&target={tgt_id}]Wyślij[/url]"
+                        if from_id and tgt_id and server else "-"
+                    )
+                    rows.append(f"[*][coord]{v['coord']}[/coord][|]{pcol}[|]{d} pol[|]{link}")
+                parts.append(
+                    "[table][**]Zastępstwo[||]Gracz[||]Odl.[||]Link[/**]\n"
+                    + "\n".join(rows) + "\n[/table]"
+                )
+                # Remove top pick from pool so it can't be reused for another attack
+                pool_set.discard(candidates[0]["coord"])
+            else:
+                parts.append("[color=#cc3333]Brak wolnych wiosek do zastępstwa![/color]")
 
         parts.append("")
 

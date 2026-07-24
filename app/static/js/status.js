@@ -2,11 +2,61 @@
 // Tracks per-attack status: "unknown" | "sent" | "missed"
 // Attack ID format: "fromCoord→target:TYPE"
 
-let _statusMap  = {};   // { id: "sent"|"missed"|"unknown" }
-let _statusPlan = [];   // current assignments snapshot
+let _statusMap    = {};   // { id: "sent"|"missed"|"unknown" }
+let _statusPlan   = [];   // current assignments snapshot
+let _statusPollId = null; // setInterval handle for live polling
+
+const STATUS_POLL_MS = 30_000; // refresh every 30 s
 
 function _statusId(fromCoord, target, type) {
     return `${fromCoord}→${target}:${type}`;
+}
+
+async function _silentRefreshStatus() {
+    // Only poll if plan is loaded; avoid overwriting mid-click edits
+    if (!_statusPlan.length) return;
+    try {
+        const fresh = await fetch('/api/attack-status').then(r => r.json());
+        // Only re-render if something actually changed
+        const prev = JSON.stringify(_statusMap);
+        if (JSON.stringify(fresh) === prev) return;
+        _statusMap = fresh;
+        _renderStatusList();
+        _updateLiveBar();
+    } catch {}
+}
+
+function _updateLiveBar() {
+    const total   = Object.keys(_statusMap).length;
+    const sent    = Object.values(_statusMap).filter(v => v === 'sent').length;
+    const missed  = Object.values(_statusMap).filter(v => v === 'missed').length;
+    const unknown = total - sent - missed;
+    const bar = document.getElementById('status-live-bar');
+    if (!bar) return;
+    const pSent    = total ? Math.round(sent    / total * 100) : 0;
+    const pMissed  = total ? Math.round(missed  / total * 100) : 0;
+    const pUnknown = 100 - pSent - pMissed;
+    bar.innerHTML = `
+        <div class="live-bar-track" title="${sent} wysłanych / ${missed} nie wysłanych / ${unknown} nieznanych">
+            <div class="live-bar-sent"    style="width:${pSent}%"   ></div>
+            <div class="live-bar-missed"  style="width:${pMissed}%" ></div>
+            <div class="live-bar-unknown" style="width:${pUnknown}%"></div>
+        </div>
+        <span class="live-bar-label">
+            <span style="color:#4ec97a">✅ ${sent}</span>
+            <span style="color:#e06060">❌ ${missed}</span>
+            <span style="color:#888">❓ ${unknown}</span>
+            <span class="live-dot" title="Live – odświeża co 30 s">●</span>
+        </span>`;
+}
+
+function _startStatusPolling() {
+    if (_statusPollId) return;
+    _statusPollId = setInterval(_silentRefreshStatus, STATUS_POLL_MS);
+}
+
+function _stopStatusPolling() {
+    if (_statusPollId) { clearInterval(_statusPollId); _statusPollId = null; }
 }
 
 async function loadAttackStatus() {
@@ -39,6 +89,8 @@ async function loadAttackStatus() {
         }
 
         _renderStatusList();
+        _updateLiveBar();
+        _startStatusPolling();
         setStatus(msg, `✓ Załadowano ${_statusPlan.length} celów.`, 'ok');
     } catch (e) {
         setStatus(msg, 'Błąd ładowania: ' + e.message, 'err');

@@ -16,5 +16,6 @@ from .messages import bp as bp_messages  # noqa: E402, F401
 from .tools    import bp as bp_tools     # noqa: E402, F401
 from .export   import bp as bp_export    # noqa: E402, F401
 from .status   import bp as bp_status    # noqa: E402, F401
+from .discord  import bp as bp_discord   # noqa: E402, F401
 
-blueprints = [bp_pages, bp_data, bp_plan, bp_players, bp_messages, bp_tools, bp_export, bp_status]
+blueprints = [bp_pages, bp_data, bp_plan, bp_players, bp_messages, bp_tools, bp_export, bp_status, bp_discord]

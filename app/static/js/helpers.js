@@ -6,6 +6,8 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
         document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
         btn.classList.add('active');
         document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+        if (btn.dataset.tab === 'status')  loadAttackStatus();
+        if (btn.dataset.tab === 'discord') loadDiscordConfig();
     });
 });
 
