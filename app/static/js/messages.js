@@ -1,0 +1,110 @@
+/* ── WIADOMOŚCI ─────────────────────────────────────────────────────────── */
+
+async function generateMessages() {
+    const status = document.getElementById('messages-status');
+    setStatus(status, 'Generowanie…');
+
+    const gapMs = _gapFieldsToMs('plan');
+    const updatedAssignments = _currentAssignments.map((a, aIdx) => {
+        const dtInput = document.querySelector(`.asgn-off-dt[data-aidx="${aIdx}"]`);
+        const offDt = dtInput ? dtInput.value : (a.arrival_dt || '');
+        let nobleDt = offDt;
+        if (offDt && gapMs > 0)
+            nobleDt = new Date(new Date(offDt).getTime() + gapMs).toISOString().slice(0, 23);
+        return { ...a, arrival_dt: offDt || a.arrival_dt, noble_arrival_dt: nobleDt || a.noble_arrival_dt };
+    });
+
+    try {
+        const res  = await fetch('/api/messages', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ assignments: updatedAssignments }),
+        });
+        const data = await res.json();
+        if (!res.ok) { setStatus(status, data.error || 'Błąd serwera', 'err'); return; }
+        setStatus(status, `✓ Wygenerowano ${data.messages.length} wiadomości.`, 'ok');
+        renderMessages(data.messages);
+    } catch { setStatus(status, 'Błąd połączenia', 'err'); }
+}
+
+function renderMessages(messages) {
+    const container = document.getElementById('messages-output');
+    const now = Date.now();
+
+    container.innerHTML = messages.map((m, idx) => {
+        const attackRows = m.attacks.map(a => {
+            const sendDt  = new Date(a.send_dt);
+            const diffMs  = sendDt.getTime() - now;
+            const diffMin = diffMs / 60000;
+            const sendFmt = sendDt.toLocaleString('pl-PL', {
+                year: 'numeric', month: '2-digit', day: '2-digit',
+                hour: '2-digit', minute: '2-digit', second: '2-digit',
+            });
+            let cdClass, cdText;
+            if (diffMs < 0) {
+                cdClass = 'past';
+                const ago = Math.abs(diffMin);
+                cdText = ago < 60 ? `${Math.round(ago)}min temu` : `${Math.floor(ago/60)}h ${Math.round(ago%60)}min temu`;
+            } else if (diffMin < 12 * 60) {
+                cdClass = 'warn';
+                cdText = diffMin < 60 ? `za ${Math.round(diffMin)}min` : `za ${Math.floor(diffMin/60)}h ${Math.round(diffMin%60)}min`;
+            } else {
+                cdClass = 'ok';
+                cdText = `za ${Math.floor(diffMin/60)}h ${Math.round(diffMin%60)}min`;
+            }
+            const countdown = `<span class="send-countdown ${cdClass}">${cdText}</span>`;
+            const attackBtn = (a.from_id && a.target_id && _settings.server)
+                ? `<a class="tw-link" href="https://pl${_settings.server}.plemiona.pl/game.php?village=${a.from_id}&screen=place&target=${a.target_id}" target="_blank" rel="noopener">⚔ Wyślij</a>`
+                : `<span class="dim">${a.type}</span>`;
+            return `<tr>
+                <td>${attackBtn}</td>
+                <td><strong>${a.type}</strong></td>
+                <td><code>${a.from_coord}</code></td>
+                <td><code>${a.target_coord}</code></td>
+                <td>${a.distance} pol</td>
+                <td>${fmtMinutes(a.travel_min)}</td>
+                <td><strong>${sendFmt}</strong><br>${countdown}</td>
+                <td>${fmt(a.off)}</td>
+                <td>${a.nobles > 0 ? a.nobles : '-'}</td>
+                <td>${a.burzenie || '-'}</td>
+            </tr>`;
+        }).join('');
+
+        const mailBtn = m.mail_link
+            ? `<a class="btn btn-mail" href="${m.mail_link}" target="_blank" rel="noopener">✉ Otwórz w TW</a>`
+            : '';
+
+        return `<div class="card msg-card">
+            <div class="msg-header">
+                <span class="msg-player">👤 ${m.player}</span>
+                <span class="msg-count">${m.attacks.length} wysyłek</span>
+                ${mailBtn}
+                <button class="btn btn-copy" data-idx="${idx}" title="Kopiuj BBCode">📋 Kopiuj BBCode</button>
+            </div>
+            <div class="msg-attacks">
+                <table>
+                    <thead><tr>
+                        <th>Link</th><th>Typ</th><th>Z wioski</th><th>Cel</th>
+                        <th>Dystans</th><th>Podróż</th><th>Wysyłka o</th>
+                        <th>OFF</th><th>Szlach.</th><th>Burzenie/Katy</th>
+                    </tr></thead>
+                    <tbody>${attackRows}</tbody>
+                </table>
+            </div>
+            <details class="bbcode-wrap">
+                <summary>Pokaż BBCode</summary>
+                <textarea class="bbcode-ta" rows="12" readonly>${escHtml(m.message)}</textarea>
+            </details>
+        </div>`;
+    }).join('');
+
+    container.querySelectorAll('.btn-copy').forEach(btn => {
+        btn.addEventListener('click', () => {
+            navigator.clipboard.writeText(messages[parseInt(btn.dataset.idx)].message).then(() => {
+                const orig = btn.textContent;
+                btn.textContent = '✓ Skopiowano!';
+                setTimeout(() => btn.textContent = orig, 2000);
+            });
+        });
+    });
+}

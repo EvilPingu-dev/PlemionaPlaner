@@ -1,0 +1,220 @@
+/* ── Conflicts / shared-connection pairs ─────────────────────────────────── */
+.add-conflict-row {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.form-select {
+    background: #060d18;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-size: .85rem;
+    padding: 5px 8px;
+    min-width: 160px;
+}
+
+.conflict-list      { list-style: none; margin-bottom: 8px; }
+.conflict-item      { align-items: center; display: flex; gap: 8px; padding: 5px 0; border-bottom: 1px solid var(--border); }
+.conflict-item:last-child { border-bottom: none; }
+.conflict-names     { color: var(--gold); flex: 1; font-size: .88rem; }
+.conflict-names strong { color: var(--text); }
+
+/* ── Time-till-send badge in Wiadomości ──────────────────────────────────── */
+.send-countdown {
+    border-radius: 4px;
+    font-size: .78rem;
+    font-weight: 600;
+    padding: 2px 7px;
+    white-space: nowrap;
+}
+
+.send-countdown.ok   { background: #0d2a1a; color: #4ec97a; }
+.send-countdown.warn { background: #1a2a40; color: #60aaee; }
+.send-countdown.past { background: #2a0d0d; color: #e06060; }
+
+/* ── Player toggle button ────────────────────────────────────────────────── */
+.toggle-btn {
+    border: 1px solid;
+    border-radius: var(--radius);
+    cursor: pointer;
+    font-size: .78rem;
+    padding: 3px 10px;
+    transition: background .15s;
+    white-space: nowrap;
+}
+
+.toggle-btn.enabled  { background: #0d2a1a; border-color: #1a6b3c; color: #4ec97a; }
+.toggle-btn.disabled { background: #2a0d0d; border-color: #7a2020; color: #e06060; }
+.toggle-btn.enabled:hover  { background: #2a5a2a; }
+.toggle-btn.disabled:hover { background: #5a2a2a; }
+
+.row-disabled td { opacity: .45; }
+
+/* ── Plan list modal ─────────────────────────────────────────────────────── */
+.modal {
+    align-items: center;
+    background: rgba(0,0,0,.7);
+    bottom: 0;
+    display: flex;
+    justify-content: center;
+    left: 0;
+    position: fixed;
+    right: 0;
+    top: 0;
+    z-index: 1000;
+}
+
+.modal-box {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: 0 8px 32px rgba(0,0,0,.6);
+    max-height: 80vh;
+    max-width: 500px;
+    overflow-y: auto;
+    padding: 20px 24px;
+    width: 90%;
+}
+
+.modal-header {
+    align-items: center;
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 14px;
+}
+
+.modal-header h3 { color: var(--gold); font-size: 1rem; }
+
+.modal-close {
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    cursor: pointer;
+    font-size: 1.2rem;
+    line-height: 1;
+    padding: 2px 6px;
+}
+
+.modal-close:hover { color: var(--text); }
+
+.plan-list       { list-style: none; }
+.plan-list-item  { align-items: center; border-bottom: 1px solid var(--border); display: flex; gap: 8px; padding: 8px 0; }
+.plan-list-name  { color: var(--text); flex: 1; font-size: .9rem; }
+
+/* ── TW attack + mail links ──────────────────────────────────────────────── */
+.tw-link {
+    background: #1a2a0a;
+    border: 1px solid #5a8a1a;
+    border-radius: 3px;
+    color: #a0d060;
+    font-size: .78rem;
+    padding: 2px 8px;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.tw-link:hover { background: #2a4a0a; color: #c0f080; }
+
+.btn-mail {
+    background: #0a1a2a;
+    border: 1px solid #1e3a5f;
+    border-radius: var(--radius);
+    color: #60a8d0;
+    font-size: .82rem;
+    padding: 5px 14px;
+    text-decoration: none;
+    transition: background .15s;
+}
+
+.btn-mail:hover { background: #0a2a4a; color: #80c8f0; }
+
+/* ── Script cards ────────────────────────────────────────────────────────── */
+.script-card {
+    border-color: var(--gold-dim);
+}
+
+.script-card summary {
+    color: var(--gold);
+    cursor: pointer;
+    font-size: .9rem;
+    font-weight: 600;
+    list-style: none;
+    padding: 2px 0;
+    user-select: none;
+}
+
+.script-card summary::-webkit-details-marker { display: none; }
+.script-card summary::before { content: '▶ '; font-size: .7em; }
+details[open].script-card summary::before { content: '▼ '; }
+
+.script-hint {
+    color: var(--text-dim);
+    font-size: .75rem;
+    font-weight: 400;
+}
+
+.script-pre {
+    background: #080604;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: #90c870;
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: .8rem;
+    line-height: 1.5;
+    margin: 10px 0;
+    overflow-x: auto;
+    padding: 12px 14px;
+    white-space: pre;
+}
+
+.btn-copy-script {
+    background: #1a2a0a;
+    border: 1px solid #4a6a1a;
+    border-radius: var(--radius);
+    color: #90c060;
+    cursor: pointer;
+    font-size: .82rem;
+    padding: 6px 16px;
+    transition: background .15s;
+}
+
+.btn-copy-script:hover { background: #2a4a1a; }
+
+
+/* ── Attack status tracker ───────────────────────────────────────────────── */
+.status-player-card { margin-bottom: 14px; }
+
+.status-player-header {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+
+.status-player-name   { font-size: 1rem; }
+.status-player-summary { font-size: .85rem; font-weight: 600; }
+.status-counts        { color: var(--text-dim); font-size: .82rem; }
+
+.st-btn {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: .95rem;
+    margin-right: 3px;
+    opacity: .35;
+    padding: 2px 6px;
+    transition: opacity .12s, border-color .12s;
+}
+
+.st-btn.active { opacity: 1; border-color: var(--gold-dim); }
+.st-btn:hover  { opacity: .8; }
+
+tr.status-row[data-status="sent"]    td { background: rgba(10, 60, 20, .25); }
+tr.status-row[data-status="missed"]  td { background: rgba(80, 10, 10, .35); }
+tr.status-row[data-status="unknown"] td { background: transparent; }

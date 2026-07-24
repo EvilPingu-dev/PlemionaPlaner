@@ -1,0 +1,276 @@
+/* ── Settings form ───────────────────────────────────────────────────────── */
+.form-grid {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    margin-bottom: 14px;
+}
+
+.form-grid label,
+.label-block {
+    color: var(--text-dim);
+    display: flex;
+    flex-direction: column;
+    font-size: .78rem;
+    font-weight: 600;
+    gap: 5px;
+    letter-spacing: .3px;
+    text-transform: uppercase;
+}
+
+.label-block { margin-bottom: 14px; }
+
+.form-grid input,
+.form-grid select {
+    background: #060d18;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-size: .9rem;
+    padding: 7px 10px;
+}
+
+.form-grid input:focus { border-color: var(--gold-dim); outline: none; }
+
+.settings-checks {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 14px;
+}
+
+.settings-save-bar {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin: 8px 0;
+}
+
+/* Sort group: select + NOT checkbox stacked in one grid cell */
+.sort-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+.sort-group-label {
+    color: var(--text-dim);
+    font-size: .78rem;
+    font-weight: 600;
+    letter-spacing: .3px;
+    text-transform: uppercase;
+}
+.sort-group .form-select {
+    background: #060d18;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-size: .9rem;
+    padding: 7px 10px;
+}
+.sort-not-check {
+    font-size: .82rem !important;
+    margin-top: 3px;
+}
+
+/* Planner settings two-column layout */
+.planner-cols {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 14px;
+}
+
+/* Arrival slots section */
+.slots-section {
+    background: rgba(255,255,255,.03);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    margin-top: 14px;
+}
+.slots-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+.slot-row {
+    display: grid;
+    grid-template-columns: 28px auto 1fr auto;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 7px;
+}
+.slot-num {
+    color: var(--gold-dim);
+    font-weight: 700;
+    font-size: .85rem;
+    text-align: center;
+}
+.slot-row input[type="text"] {
+    font-size: .85rem;
+}
+.slot-row input[type="datetime-local"] {
+    font-size: .85rem;
+}
+.btn-sm {
+    font-size: .75rem;
+    padding: 4px 10px;
+}
+.btn-remove-slot {
+    background: var(--red);
+    border-color: var(--red);
+    font-size: .8rem;
+    padding: 3px 8px;
+    line-height: 1.3;
+    border-radius: 4px;
+    cursor: pointer;
+    color: #f0c0c0;
+    border: 1px solid var(--red);
+}
+.btn-remove-slot:hover { background: #a03030; }
+.planner-col {
+    background: rgba(255,255,255,.03);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 14px 16px;
+}
+.planner-col-title {
+    color: var(--gold-dim);
+    font-size: .85rem;
+    font-weight: 700;
+    letter-spacing: .4px;
+    margin: 0 0 4px;
+    text-transform: uppercase;
+}
+.planner-col label {
+    color: var(--text-dim);
+    display: flex;
+    flex-direction: column;
+    font-size: .78rem;
+    font-weight: 600;
+    gap: 5px;
+    letter-spacing: .3px;
+    text-transform: uppercase;
+}
+.planner-col input[type="number"],
+.planner-col .form-select {
+    background: #060d18;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-size: .9rem;
+    padding: 7px 10px;
+}
+.dist-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+@media (max-width: 640px) {
+    .planner-cols { grid-template-columns: 1fr; }
+    .dist-row     { grid-template-columns: 1fr; }
+}
+.check-label {
+    align-items: center;
+    color: var(--text);
+    cursor: pointer;
+    display: flex;
+    font-size: .88rem;
+    gap: 10px;
+}
+
+.check-label input[type="checkbox"] {
+    accent-color: var(--gold);
+    cursor: pointer;
+    height: 16px;
+    width: 16px;
+}
+
+/* ── Players table ───────────────────────────────────────────────────────── */
+.coords-cell { max-width: 520px; line-height: 1.8; }
+
+/* ── Distance tag inside coord-tag ──────────────────────────────────────── */
+.dist-tag  { color: var(--text-dim); font-family: inherit; }
+.noble-tag { border-color: var(--gold-dim); }
+
+/* ── Message cards ───────────────────────────────────────────────────────── */
+.msg-card   { margin-bottom: 18px; }
+
+.msg-header {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.msg-player {
+    color: var(--gold);
+    font-size: 1.05rem;
+    font-weight: 700;
+}
+
+.msg-count  { color: var(--text-dim); font-size: .82rem; }
+
+.btn-copy {
+    background: #2a3a1a;
+    border: 1px solid #4a6a2a;
+    border-radius: var(--radius);
+    color: #90c060;
+    cursor: pointer;
+    font-size: .82rem;
+    margin-left: auto;
+    padding: 5px 14px;
+    transition: background .15s;
+}
+
+.btn-copy:hover { background: #3a5a2a; }
+
+.msg-attacks  { margin-bottom: 10px; overflow-x: auto; }
+
+.bbcode-wrap  { margin-top: 10px; }
+.bbcode-wrap summary {
+    color: var(--text-dim);
+    cursor: pointer;
+    font-size: .82rem;
+    padding: 4px 0;
+    user-select: none;
+}
+
+.bbcode-ta {
+    background: #080604;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: #90a870;
+    font-family: 'Consolas', monospace;
+    font-size: .78rem;
+    line-height: 1.4;
+    margin-top: 8px;
+    padding: 10px 12px;
+    width: 100%;
+}
+
+/* ── Forum players output ─────────────────────────────────────────────── */
+#forum-players-output textarea,
+#tools-forum-players-output textarea {
+    background: #080604;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: #90a870;
+    font-family: 'Consolas', monospace;
+    font-size: .75rem;
+    line-height: 1.4;
+    padding: 8px 10px;
+    width: 100%;
+    resize: vertical;
+}
+
+/* ── Validate issues ──────────────────────────────────────────────────── */
+#validate-output div {
+    font-size: .85rem;
+    line-height: 1.5;
+}

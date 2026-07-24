@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Planer Akcji – Plemiona</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/plan.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/settings.css') }}">
+</head>
+<body>
+
+<header>
+    <div class="header-inner">
+        <span class="header-icon">⚔</span>
+        <div>
+            <h1>Planer Akcji</h1>
+            <p class="header-sub">Tribal Wars – Rozpiski Plemienna</p>
+        </div>
+    </div>
+</header>
+
+<!-- Plan manager bar -->
+<div class="plan-bar">
+    <div class="plan-bar-left">
+        <span class="plan-bar-label">Aktywna akcja:</span>
+        <span class="plan-bar-name" id="active-plan-name">(niezapisana)</span>
+    </div>
+    <div class="plan-bar-right">
+        <input type="text" id="plan-name-input" placeholder="Nazwa akcji…" class="plan-name-input">
+        <button class="btn btn-primary btn-sm" id="btn-plan-save">💾 Zapisz</button>
+        <button class="btn btn-sm" id="btn-plan-list">📂 Moje akcje</button>
+    </div>
+</div>
+
+<nav class="tabs" role="tablist">
+    <button class="tab-btn active" data-tab="troops"   role="tab">🧥 Wojska</button>
+    <button class="tab-btn"        data-tab="targets"  role="tab">🎯 Cele</button>
+    <button class="tab-btn"        data-tab="players"  role="tab">👥 Gracze</button>
+    <button class="tab-btn"        data-tab="plan"     role="tab">📋 Rozpiski</button>
+    <button class="tab-btn"        data-tab="messages" role="tab">📨 Wiadomości</button>
+    <button class="tab-btn"        data-tab="timeline" role="tab">⏱ Timeline</button>
+    <button class="tab-btn"        data-tab="forum"    role="tab">💬 Forum</button>
+    <button class="tab-btn"        data-tab="tools"    role="tab">🛠 Narzędzia</button>
+    <button class="tab-btn"        data-tab="status"   role="tab">📡 Status akcji</button>
+    <button class="tab-btn"        data-tab="settings" role="tab">⚙ Ustawienia</button>
+</nav>
+
+<!-- Plan list modal -->
+<div id="plan-modal" class="modal" style="display:none">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h3>Moje akcje</h3>
+            <button class="modal-close" id="btn-plan-modal-close">✕</button>
+        </div>
+        <div id="plan-list-container">Ładowanie…</div>
+    </div>
+</div>
+
+<main>
+
+<!-- TAB: WOJSKA -->
+<section id="tab-troops" class="tab-pane active" role="tabpanel">
+    <details class="card script-card">
+        <summary>📜 Skrypt – Zbiórka wojska i obrony <span class="script-hint">(kliknij, aby rozwinąć)</span></summary>
+        <p class="hint" style="margin-top:10px">
+            Zapisz jako zakładkę w przeglądarce i uruchom na stronie plemion.<br>
+            Skopiuj wynik i wklej poniżej.
+        </p>
+        <pre id="script-troops" class="script-pre">javascript: var COLLECT_TROOPS_DATA_V2 = {
+    cache: true,
+    cacheTime: 5,
+    removedPlayers: "",
+    allowedPlayers: "",
+    firstLineTroops: "",
+    showFirstLineTroops: false,
+    showNicknamesTroops: false,
+    firstLineDeff: "",
+    showFirstLineDeff: false,
+    showNicknamesDeff: false,
+};
+$.getScript("https://media.innogamescdn.com/com_DS_PL/skrypty/Zbiorka_wojska_i_obrony.js");
+void 0;</pre>
+        <div class="btn-row">
+            <button class="btn btn-copy-script" data-target="script-troops">📋 Kopiuj skrypt</button>
+        </div>
+    </details>
+
+    <div class="card">
+        <h2>Import wojsk</h2>
+        <p class="hint">
+            Wklej wynik skryptu <em>Zbiórka wojska i obrony</em> poniżej.<br>
+            Format: <code>x|y,populacja,pikinier,miecznik,topornik,…</code>
+        </p>
+        <textarea id="troops-input" rows="12"
+            placeholder="432|476,4.429,0,0,0,53,24,0,0,152,0,13,0,0,0,0,0,"></textarea>
+        <div class="btn-row">
+            <button class="btn btn-primary" id="btn-import-troops">Importuj wojska</button>
+            <span class="status-msg" id="troops-status"></span>
+        </div>
+    </div>
+    <div class="card" id="troops-summary-card" style="display:none">
+        <div class="summary-grid" id="troops-summary"></div>
+    </div>
+    <div class="card" id="troops-table-card" style="display:none">
+        <h2>Wioski (<span id="troops-count">0</span>)</h2>
+        <div class="table-wrap">
+            <table id="troops-table">
+                <thead><tr>
+                    <th>Koordynaty</th><th>Właściciel</th><th></th>Pop.</th>
+                    <th>Offy ⚔</th><th>Szlachcice 👑</th>
+                    <th>Katapulty 💥</th><th>Tarany 🐏</th>
+                </tr></thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
+<!-- TAB: CELE -->
+<section id="tab-targets" class="tab-pane" role="tabpanel">
+    <div class="subtab-bar" role="tablist">
+        <button class="subtab-btn active" data-subtab="szlachcice">🏰 Szlachcice</button>
+        <button class="subtab-btn" data-subtab="fejki">🎭 Fejki</button>
+        <button class="subtab-btn" data-subtab="burzaki">💥 Burzaki</button>
+    </div>
+
+    <!-- ── Subtab: Szlachcice ── -->
+    <div id="subtab-szlachcice" class="subtab-pane active">
+    <div class="card">
+        <h2>Cele akcji</h2>
+        <p class="hint">
+            Wpisz cele ręcznie – jedna wioska na linię:<br>
+            <code>x|y:ile_offów:ile_szlachciców</code> lub z numerem czasu wejścia:
+            <code>x|y:ile_offów:ile_szlachciców:numer_slotu</code>
+        </p>
+        <textarea id="targets-input" rows="10" autocomplete="off"
+            placeholder="456|476:4:4&#10;455|483:4:4:2&#10;452|483:4:4:3"></textarea>
+        <div class="btn-row">
+            <button class="btn btn-primary" id="btn-save-targets">Zapisz cele</button>
+            <span class="status-msg" id="targets-status"></span>
+        </div>
+    </div>
+    <div class="card" id="targets-table-card" style="display:none">
+        <h2>Zapisane cele (<span id="targets-count">0</span>)</h2>
+        <div class="table-wrap">
+            <table id="targets-table">
+                <thead><tr>
+                    <th>Koordynaty</th>
+                    <th>Offy potrzebne</th>
+                    <th>Szlachcice potrzebni</th>
+                    <th>Slot czasu</th>
+                </tr></thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+    </div><!-- /subtab-szlachcice -->
+
+    <!-- ── Subtab: Fejki ── -->
+    <div id="subtab-fejki" class="subtab-pane">
+    <div class="card">
+        <h2>Cele fejków</h2>
+        <p class="hint">
+            Jedna wioska na linię:<br>
+            <code>x|y:ile_fejków:ile_fejków_szlachcicowych</code><br>
+            Przykład: <code>467|499:5:0</code> &rarr; 5 fejków offowych, 0 fejków szlachcicowych
+        </p>
+        <textarea id="fejki-input" rows="10" autocomplete="off"
+            placeholder="467|499:5:0&#10;465|499:5:0&#10;470|507:3:1"></textarea>
+        <div class="btn-row">
+            <button class="btn btn-primary" id="btn-save-fejki">Zapisz fejki</button>
+            <span class="status-msg" id="fejki-status"></span>
+        </div>
+    </div>
+    <div class="card" id="fejki-table-card" style="display:none">
+        <h2>Zapisane fejki (<span id="fejki-count">0</span>)</h2>
+        <div class="table-wrap">
+            <table id="fejki-table">
+                <thead><tr>
+                    <th>Koordynaty</th>
+                    <th>Fejki offowe</th>
+                    <th>Fejki szlachcicowe</th>
+                </tr></thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+    </div><!-- /subtab-fejki -->
+
+    <!-- ── Subtab: Burzaki ── -->
+    <div id="subtab-burzaki" class="subtab-pane">
+    <div class="card">
+        <h2>Cele burzaków</h2>
+        <p class="hint">
+            Format: <code>x|y:ataki:typ</code><br>
+            Typy budynków: <code>1</code>=Ratusz &nbsp;<code>2</code>=Kuźńia &nbsp;<code>3</code>=Zagroda &nbsp;<code>4</code>=Tartak &nbsp;<code>5</code>=Cegielnia &nbsp;<code>6</code>=Huta Żelaza
+        </p>
+        <textarea id="burzaki-input" rows="10" autocomplete="off"
+            placeholder="467|499:5:1&#10;465|499:5:2&#10;470|507:5:4"></textarea>
+        <div class="btn-row">
+            <button class="btn btn-primary" id="btn-save-burzaki">Zapisz burzaki</button>
+            <span class="status-msg" id="burzaki-status"></span>
+        </div>
+    </div>
+    <div class="card" id="burzaki-table-card" style="display:none">
+        <h2>Zapisane burzaki (<span id="burzaki-count">0</span>)</h2>
+        <div class="table-wrap">
+            <table id="burzaki-table">
+                <thead><tr>
+                    <th>Koordynaty</th>
+                    <th>Ataki</th>
+                    <th>Budynek</th>
+                </tr></thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+    </div><!-- /subtab-burzaki -->
+
+</section>
+
+<!-- TAB: GRACZE -->
+<section id="tab-players" class="tab-pane" role="tabpanel">
+    <div class="card" id="conflicts-card">
+        <h2>⚡ Wspólne łącze (konflikty)</h2>
+        <p class="hint">
+            Gracze oznaczeni jako para <strong>nie mogą atakować tego samego celu</strong>
+            (blokada gry – wspólne IP/łącze). Planer automatycznie ich rozdziela.
+        </p>
+        <div id="conflicts-list"></div>
+        <div class="add-conflict-row">
+            <select id="conflict-player-a" class="form-select"></select>
+            <span style="color:var(--text-dim)">↔</span>
+            <select id="conflict-player-b" class="form-select"></select>
+            <button class="btn btn-sm btn-primary" id="btn-add-conflict">+ Dodaj parę</button>
+            <span class="status-msg" id="conflicts-status"></span>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>Pobierz graczy automatycznie</h2>
+        <p class="hint">
+            Wymaga: zaimportowanych wojsk i ustawionego numeru serwera w zakładce ⚙ Ustawienia.<br>
+            Dane pobierane są z publicznego API Tribal Wars
+            (<code>plXXX.plemiona.pl/map/village.txt</code> + <code>player.txt</code>).
+        </p>
+        <div class="btn-row">
+            <button class="btn btn-success" id="btn-fetch-players">🌐 Pobierz z serwera TW</button>
+            <span class="status-msg" id="fetch-players-status"></span>
+        </div>
+    </div>
+
+    <details class="card script-card">
+        <summary>📜 Skrypt – ręczne przypisanie (fallback) <span class="script-hint">(kliknij, aby rozwinąć)</span></summary>
+        <p class="hint" style="margin-top:10px">
+            Jeśli auto-pobieranie nie działa, wpisz ręcznie – jedna linia na gracza:<br>
+            <code>NazwaGracza: x|y, x|y, x|y</code>
+        </p>
+        <textarea id="players-input" rows="12" autocomplete="off"
+            placeholder="CzarnamambaPL: 432|476, 431|476, 466|496&#10;InnyGracz: 468|485, 467|487"></textarea>
+        <div class="btn-row">
+            <button class="btn btn-primary" id="btn-save-players">Zapisz ręcznie</button>
+            <span class="status-msg" id="players-status"></span>
+        </div>
+    </details>
+
+    <div class="card" id="players-table-card" style="display:none">
+        <h2>Gracze (<span id="players-count">0</span>)</h2>
+        <p class="hint">
+            Wyłączeni gracze (🔴) są pomijani przy generowaniu rozpiski.<br>
+            Zmiana wymaga ponownego kliknięcia ▶ Rozpisz tę akcję.
+        </p>
+        <div class="table-wrap">
+            <table id="players-table">
+                <thead><tr>
+                    <th>Status</th><th>Gracz</th><th>Liczba wiosek</th><th>Wioski</th>
+                </tr></thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
+<!-- TAB: ROZPISKI -->
+<section id="tab-plan" class="tab-pane" role="tabpanel">
+    <div class="card">
+        <h2>Rozpisz akcję</h2>
+        <p class="hint">
+            Algorytm przydzieli <strong>najbliższe</strong> wolne wioski offowe
+            do każdego celu i rozdzieli szlachciców.
+            Wyłączeni gracze (zakładka 👥 Gracze) są pomijani.
+        </p>
+        <div class="btn-row">
+            <button class="btn btn-success" id="btn-run-plan">▶ Rozpisz tę akcję</button>
+            <span class="status-msg" id="plan-status"></span>
+        </div>
+    </div>
+    <div class="card" id="plan-summary-card" style="display:none">
+        <div class="summary-grid" id="plan-summary"></div>
+    </div>
+    <div class="card" id="plan-results-card" style="display:none">
+        <div class="plan-results-header">
+            <h2>Przydział – Szlachcice</h2>
+            <div class="btn-row" style="margin:0">
+                <button class="btn btn-sm" id="btn-edit-plan">✏ Edytuj ręcznie</button>
+                <button class="btn btn-success btn-sm" id="btn-save-plan-edits" style="display:none">Zapisz zmiany</button>
+                <button class="btn btn-sm" id="btn-cancel-plan-edits" style="display:none">Anuluj</button>
+            </div>
+        </div>
+        <div class="timing-toolbar" id="plan-timing-toolbar">
+            <div class="timing-bulk-row">
+                <span class="timing-label-sm">Ustaw wejście OFF dla wszystkich:</span>
+                <div id="timing-slot-btns" class="timing-slot-btns"></div>
+                <span style="margin-left:auto;display:flex;align-items:center;gap:8px">
+                    <label class="timing-label-sm" style="margin:0">Lub wpisz ręcznie:</label>
+                    <input type="datetime-local" id="timing-bulk-dt" step="1">
+                    <button class="btn btn-sm btn-primary" id="btn-timing-apply-all">Zastosuj wszystkim</button>
+                </span>
+            </div>
+            <div class="timing-gap-row">
+                <span class="timing-label-sm">Odstęp OFF→szlachcic:</span>
+                <div class="gap-fields">
+                    <input type="number" id="plan-gap-min" min="0" max="999" step="1" value="1" placeholder="min"><span class="gap-unit">min</span>
+                    <input type="number" id="plan-gap-sec" min="0" max="59"  step="1" value="0" placeholder="sek"><span class="gap-unit">sek</span>
+                    <input type="number" id="plan-gap-ms"  min="0" max="999" step="1" value="0" placeholder="ms" ><span class="gap-unit">ms</span>
+                </div>
+                <button class="btn btn-sm" id="btn-apply-gap">Przelicz szlachcice</button>
+                <span class="hint" style="margin-left:8px;font-size:.75rem">zmiany widoczne po wygenerowaniu wiadomości</span>
+            </div>
+        </div>
+        <div id="plan-assignments"></div>
+    </div>
+    <div class="card" id="plan-burst-card" style="display:none">
+        <h2>Przydział – Burzaki 💥</h2>
+        <div id="plan-burst-assignments"></div>
+    </div>
+    <div class="card" id="plan-fake-card" style="display:none">
+        <h2>Przydział – Fejki 🎭</h2>
+        <div id="plan-fake-assignments"></div>
+    </div>
+</section>
+
+<!-- TAB: WIADOMOŚCI -->
+<section id="tab-messages" class="tab-pane" role="tabpanel">
+    <div class="card">
+        <h2>Generuj wiadomości dla graczy</h2>
+        <p class="hint">
+            Wymaga: wojsk, celów, rozpiski i graczy.<br>
+            Czas akcji ustawiasz w zakładce <strong>⚙ Ustawienia</strong>.
+        </p>
+        <div class="btn-row">
+            <button class="btn btn-success" id="btn-gen-messages">📨 Generuj wiadomości</button>
+            <span class="status-msg" id="messages-status"></span>
+        </div>
+    </div>
+    <div id="messages-output"></div>
+</section>
+
+<!-- TAB: FORUM -->
+<section id="tab-forum" class="tab-pane" role="tabpanel">
+    <div class="card">
+        <h2>Posta na forum plemienia</h2>
+        <p class="hint">
+            Generuje BBCode z przeglądem akcji (tabelą celów i przydziałów).
+            Możesz go wkleić bezpośrednio na forum TW.
+        </p>
+        <div class="btn-row">
+            <button class="btn btn-success" id="btn-gen-forum">💬 Generuj BBCode (ogólny)</button>
+            <button class="btn btn-copy" id="btn-copy-forum" style="display:none">📋 Kopiuj BBCode</button>
+            <span class="status-msg" id="forum-status"></span>
+        </div>
+    </div>
+    <div class="card" id="forum-preview-card" style="display:none">
+        <h2>Podgląd (ogólny)</h2>
+        <textarea id="forum-bbcode" class="bbcode-ta" rows="20" readonly></textarea>
+    </div>
+    <div class="card" id="forum-players-card" style="display:none">
+        <h2>BBCode per gracz</h2>
+        <div id="forum-players-output"></div>
+    </div>
+</section>
+
+<!-- TAB: TIMELINE -->
+<section id="tab-timeline" class="tab-pane" role="tabpanel">
+    <div class="card">
+        <h2>⏱ Timeline wysyłek</h2>
+        <p class="hint">Wszystkie ataki posortowane po czasie wysyłki. Konflikty (ten sam gracz, dwa cele, <30s) oznaczone na czerwono.</p>
+        <div class="btn-row">
+            <button class="btn btn-success" id="btn-gen-timeline">▶ Generuj timeline</button>
+            <span class="status-msg" id="timeline-status"></span>
+        </div>
+    </div>
+    <div class="card" id="timeline-summary-card" style="display:none">
+        <div class="summary-grid" id="timeline-summary"></div>
+    </div>
+    <div id="timeline-output"></div>
+</section>
+
+<!-- TAB: NARZĘDZIA -->
+<section id="tab-tools" class="tab-pane" role="tabpanel">
+
+    <!-- Validate plan -->
+    <div class="card">
+        <h2>✅ Walidacja rozpiski</h2>
+        <p class="hint">Sprawdza: kolejność OFF→szlachcic, rozpiętość trainu, duplikaty wiosek, overstack.</p>
+        <div class="btn-row">
+            <button class="btn btn-success" id="btn-validate">🔍 Sprawdź rozpiski</button>
+            <span class="status-msg" id="validate-status"></span>
+        </div>
+        <div id="validate-output" style="margin-top:12px"></div>
+    </div>
+
+    <!-- Per-player send summary -->
+    <div class="card" id="player-summary-card">
+        <h2>📊 Podsumowanie per gracz</h2>
+        <p class="hint">Ile wysyłek ma każdy gracz (OFF, szlachcice, fejki, burzaki).</p>
+        <div class="btn-row">
+            <button class="btn btn-success" id="btn-player-summary">📊 Generuj podsumowanie</button>
+        </div>
+        <div id="player-summary-output" style="margin-top:12px"></div>
+    </div>
+
+    <!-- CSV export -->
+    <div class="card">
+        <h2>📥 Eksport CSV</h2>
+        <p class="hint">Pobierz pełny plan jako arkusz kalkulacyjny (.csv).</p>
+        <div class="btn-row">
+            <button class="btn btn-primary" id="btn-export-csv">⬇ Pobierz CSV</button>
+        </div>
+    </div>
+
+    <!-- Forum per-player export -->
+    <div class="card">
+        <h2>💬 Forum BBCode per gracz</h2>
+        <p class="hint">Generuje osobny BBCode dla każdego gracza do wklejenia na forum lub w wiadomości.</p>
+        <div class="btn-row">
+            <button class="btn btn-success" id="btn-forum-players">💬 Generuj per gracz</button>
+            <span class="status-msg" id="forum-players-status"></span>
+        </div>
+        <div id="tools-forum-players-output" style="margin-top:12px"></div>
+    </div>
+
+    <!-- World speed auto-detect -->
+    <div class="card">
+        <h2>🌐 Auto-wykryj prędkości jednostek</h2>
+        <p class="hint">Pobiera prędkości z API serwera TW. Wymaga ustawionego numeru serwera.</p>
+        <div class="btn-row">
+            <button class="btn btn-primary" id="btn-fetch-speeds">🌐 Pobierz prędkości</button>
+            <span class="status-msg" id="speeds-status"></span>
+        </div>
+        <div id="speeds-output" style="margin-top:8px"></div>
+    </div>
+
+    <!-- Return calculator -->
+    <div class="card">
+        <h2>🔄 Kalkulator powrotu</h2>
+        <p class="hint">Kiedy twoje wojska wróco do domu? (czas wysyłki + 2× podróż)</p>
+        <div class="btn-row">
+            <button class="btn btn-success" id="btn-calc-returns">🔄 Oblicz powroty</button>
+        </div>
+        <div id="returns-output" style="margin-top:12px"></div>
+    </div>
+
+    <!-- Backup / Restore -->
+    <div class="card">
+        <h2>💾 Backup / Przywróć</h2>
+        <div class="btn-row">
+            <a class="btn btn-primary" id="btn-backup" href="/api/backup">⬇ Pobierz backup (.zip)</a>
+            <label class="btn btn-sm" style="cursor:pointer">
+                ⬆ Wgraj backup
+                <input type="file" id="restore-file" accept=".zip" style="display:none">
+            </label>
+            <span class="status-msg" id="restore-status"></span>
+        </div>
+    </div>
+
+</section>
+
+<!-- TAB: USTAWIENIA -->
+<section id="tab-settings" class="tab-pane" role="tabpanel">
+    <div class="settings-save-bar">
+        <button class="btn btn-primary btn-save-all">💾 Zapisz ustawienia</button>
+    </div>
+    <div class="card">
+        <h2>Ustawienia akcji</h2>
+        <div class="form-grid">
+            <label>Nazwa akcji
+                <input type="text" id="s-action-name" placeholder="Akcja 1">
+            </label>
+            <label>Okno wysyłki (minuty)
+                <input type="number" id="s-window" value="1" min="1" max="60">
+            </label>
+            <label>Numer serwera (np. 230)
+                <input type="text" id="s-server" placeholder="230">
+            </label>
+            <label>Nick prowadzącego
+                <input type="text" id="s-leader" placeholder="MidnightRain X KRTFL">
+            </label>
+            <label>Prędkość OFF (min/pole) – Topornik=18, Taran=30
+                <input type="number" id="s-off-speed" value="18" min="1" max="60" step="0.5">
+            </label>
+            <label>Prędkość szlachcica (min/pole)
+                <input type="number" id="s-noble-speed" value="35" min="1" max="60" step="0.5">
+            </label>
+            <label>Odstęp OFF→szlachcic
+                <div class="gap-fields">
+                    <input type="number" id="s-gap-min" value="1" min="0" max="999" step="1" placeholder="min"><span class="gap-unit">min</span>
+                    <input type="number" id="s-gap-sec" value="0" min="0" max="59"  step="1" placeholder="sek"><span class="gap-unit">sek</span>
+                    <input type="number" id="s-gap-ms"  value="0" min="0" max="999" step="1" placeholder="ms" ><span class="gap-unit">ms</span>
+                </div>
+                <span class="hint" style="font-size:.75rem;margin-top:3px">0 = ten sam czas wejścia co OFF</span>
+            </label>
+        </div>
+
+        <div class="slots-section">
+            <div class="slots-header">
+                <span class="sort-group-label">Czasy wejścia akcji</span>
+                <button class="btn btn-sm btn-primary" id="btn-add-slot">+ Dodaj czas</button>
+            </div>
+            <p class="hint" style="margin-bottom:8px">
+                Slot 1 = domyślny. W celach możesz podać numer slotu: <code>x|y:offs:nobles:2</code>
+            </p>
+            <div id="arrival-slots-list"></div>
+        </div>
+
+        <label class="label-block" style="margin-top:14px">Treść wiadomości (wstęp)
+            <textarea id="s-greeting" rows="8"
+                placeholder="Witam,&#10;poniżej są wasze cele…"></textarea>
+        </label>
+    </div>
+
+    <div class="card">
+        <h2>⚙ Ustawienia rozpiski</h2>
+        <div class="planner-cols">
+            <!-- ── OFF ── -->
+            <div class="planner-col">
+                <h3 class="planner-col-title">⚔ Offy</h3>
+                <label>Sortowanie
+                    <select id="s-off-sort" class="form-select">
+                        <option value="closest">Najbliższe do celu</option>
+                        <option value="farthest">Najdalsze od celu</option>
+                        <option value="strongest">Najsilniejsze (OFF)</option>
+                    </select>
+                </label>
+                <label class="check-label sort-not-check">
+                    <input type="checkbox" id="s-off-sort-invert"> 🔀 NOT (odwróć kolejność)
+                </label>
+                <div class="dist-row">
+                    <label>Maks. dystans (pola)
+                        <input type="number" id="s-max-off-dist" value="0" min="0" max="999" step="1">
+                    </label>
+                    <label>Min. dystans (pola)
+                        <input type="number" id="s-min-off-dist" value="0" min="0" max="999" step="1">
+                    </label>
+                </div>
+            </div>
+            <!-- ── Nobles ── -->
+            <div class="planner-col">
+                <h3 class="planner-col-title">👑 Szlachcice</h3>
+                <label>Sortowanie
+                    <select id="s-noble-sort" class="form-select">
+                        <option value="closest">Najbliższe do celu</option>
+                        <option value="farthest">Najdalsze od celu</option>
+                        <option value="strongest">Najsilniejsze (OFF)</option>
+                    </select>
+                </label>
+                <label class="check-label sort-not-check">
+                    <input type="checkbox" id="s-noble-sort-invert"> 🔀 NOT (odwróć kolejność)
+                </label>
+                <div class="dist-row">
+                    <label>Maks. dystans (pola)
+                        <input type="number" id="s-noble-max-dist" value="60" min="0" max="999" step="1">
+                    </label>
+                    <label>Min. dystans (pola)
+                        <input type="number" id="s-noble-min-dist" value="0" min="0" max="999" step="1">
+                    </label>
+                </div>
+            </div>
+        </div>
+        <div class="settings-checks">
+            <label class="check-label">
+                <input type="checkbox" id="s-block-night"> Blokuj wysyłki nocne (23:30–07:30) – zamiast tylko ostrzegać
+            </label>
+            <label class="check-label">
+                <input type="checkbox" id="s-fill-free"> Uzupełnij brakujące offy wolnymi wioskami (drugi przebieg)
+            </label>
+        </div>
+    </div>
+
+    <div class="settings-save-bar">
+        <button class="btn btn-primary btn-save-all">💾 Zapisz ustawienia</button>
+        <span class="status-msg" id="settings-status"></span>
+    </div>
+
+    <div class="card">
+        <h2>Prędkości jednostek (PL server)</h2>
+        <div class="table-wrap">
+            <table>
+                <thead><tr><th>Jednostka</th><th>Min/pole</th><th>Rola</th></tr></thead>
+                <tbody>
+                    <tr><td>Pikinier</td><td>18</td><td class="dim">DEF</td></tr>
+                    <tr><td>Miecznik</td><td>22</td><td class="dim">DEF</td></tr>
+                    <tr><td>Topornik</td><td>18</td><td class="dim">OFF</td></tr>
+                    <tr><td>Łucznik</td><td>18</td><td class="dim">DEF</td></tr>
+                    <tr><td>Zwiadowca</td><td>9</td><td class="dim"></td></tr>
+                    <tr><td>Lekka Kawaleria</td><td>10</td><td class="dim">OFF</td></tr>
+                    <tr><td>Łucznik Konny</td><td>10</td><td class="dim"></td></tr>
+                    <tr><td>Ciężka Kawaleria</td><td>11</td><td class="dim">OFF</td></tr>
+                    <tr><td>Taran</td><td>30</td><td class="dim"></td></tr>
+                    <tr><td>Katapulta</td><td>30</td><td class="dim"></td></tr>
+                    <tr><td>Rycerz</td><td>10</td><td class="dim"></td></tr>
+                    <tr><td>Szlachcic</td><td>35</td><td class="dim">Najwolniejszy</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
+<!-- TAB: STATUS AKCJI -->
+<section id="tab-status" class="tab-pane" role="tabpanel">
+    <div class="card">
+        <h2>📡 Status wysyłek</h2>
+        <p class="hint">Oznacz każdą wysyłkę jako <strong>✅ wysłana</strong> / <strong>❌ nie wysłana</strong> / <strong>❓ nieznany</strong>.<br>
+        Gdy ktoś nie wysłał, wygeneruj post na forum z potrzebnymi zastępstwami z pobliskich wiosek.</p>
+        <div class="btn-row">
+            <button class="btn btn-primary" id="btn-load-status">▶ Załaduj / odśwież</button>
+            <button class="btn btn-success" id="btn-mark-all-sent">✅ Wszystkie wysłane</button>
+            <button class="btn" id="btn-reset-status" style="background:var(--red);color:#fff">🗑 Resetuj statusy</button>
+            <span class="status-msg" id="status-tracker-msg"></span>
+        </div>
+    </div>
+
+    <div id="status-player-list"></div>
+
+    <div class="card" id="coverage-card" style="display:none">
+        <h2>💬 Post zastępstw na forum</h2>
+        <p class="hint">Wklej to na forum – lista niewykonanych ataków i propozycje zastępców z pobliskich wiosek.</p>
+        <textarea id="coverage-bbcode" class="bbcode-ta" rows="18" readonly></textarea>
+        <div class="btn-row">
+            <button class="btn btn-sm" id="btn-copy-coverage">📋 Kopiuj</button>
+        </div>
+    </div>
+</section>
+
+</main>
+<script src="{{ url_for('static', filename='js/helpers.js') }}"></script>
+<script src="{{ url_for('static', filename='js/troops.js') }}"></script>
+<script src="{{ url_for('static', filename='js/targets.js') }}"></script>
+<script src="{{ url_for('static', filename='js/players.js') }}"></script>
+<script src="{{ url_for('static', filename='js/settings.js') }}"></script>
+<script src="{{ url_for('static', filename='js/plan.js') }}"></script>
+<script src="{{ url_for('static', filename='js/messages.js') }}"></script>
+<script src="{{ url_for('static', filename='js/plan-manager.js') }}"></script>
+<script src="{{ url_for('static', filename='js/tools.js') }}"></script>
+<script src="{{ url_for('static', filename='js/status.js') }}"></script>
+<script src="{{ url_for('static', filename='js/init.js') }}"></script>
+</body>
+</html>

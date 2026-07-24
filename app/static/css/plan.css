@@ -1,0 +1,281 @@
+/* ── Plan assignment blocks ──────────────────────────────────────────────── */
+.assign-block {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 14px;
+    overflow: hidden;
+}
+
+.assign-header {
+    align-items: center;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 9px 16px;
+}
+
+.assign-target {
+    color: var(--gold);
+    font-size: 1rem;
+    font-weight: 700;
+    font-family: 'Consolas', monospace;
+}
+
+.badge {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-size: .75rem;
+    padding: 2px 9px;
+}
+
+.badge.warn { border-color: var(--red); color: #c06060; }
+
+.assign-body {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: 1fr 1fr;
+    padding: 12px 16px;
+}
+
+.assign-group label {
+    color: var(--text-dim);
+    display: block;
+    font-size: .72rem;
+    font-weight: 600;
+    letter-spacing: .5px;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+}
+
+.coord-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+.coord-tag {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    color: var(--text);
+    font-family: 'Consolas', monospace;
+    font-size: .8rem;
+    padding: 2px 8px;
+}
+
+.missing {
+    color: #c06060;
+    font-size: .8rem;
+    font-style: italic;
+}
+
+/* ── Responsive ──────────────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+    .assign-body         { grid-template-columns: 1fr; }
+    .summary-item        { min-width: 90px; }
+    .tabs                { padding: 0 8px; }
+    .tab-btn             { padding: 10px 12px; font-size: .82rem; }
+    main                 { padding: 14px 12px 30px; }
+}
+
+/* ── Plan manager bar ────────────────────────────────────────────────────── */
+.plan-bar {
+    align-items: center;
+    background: #081020;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: space-between;
+    padding: 8px 28px;
+}
+
+.plan-bar-label  { color: var(--text-dim); font-size: .78rem; }
+.plan-bar-name   { color: var(--gold); font-size: .9rem; font-weight: 600; }
+.plan-bar-right  { align-items: center; display: flex; gap: 8px; }
+
+.plan-name-input {
+    background: #060d18;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-size: .85rem;
+    padding: 5px 10px;
+    width: 180px;
+}
+
+.btn-sm {
+    font-size: .78rem;
+    padding: 5px 12px;
+}
+
+.btn-danger         { background: var(--red);  color: #fff; }
+.btn-danger:hover   { background: #b04040; }
+
+/* ── Plan results header (title + edit buttons) ──────────────────────────── */
+.plan-results-header {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+
+.plan-results-header h2 { margin: 0; }
+
+/* ── Timing toolbar ────────────────────────────────────────────────────── */
+.timing-toolbar {
+    background: rgba(30, 58, 95, 0.25);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px 14px;
+    margin-bottom: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.timing-bulk-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.timing-gap-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.gap-fields {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+.gap-fields input[type="number"] {
+    width: 52px;
+    text-align: center;
+    font-size: .82rem;
+    padding: 3px 4px;
+}
+.gap-unit {
+    color: var(--text-dim);
+    font-size: .75rem;
+    margin-right: 4px;
+}
+.timing-label-sm {
+    color: var(--text-dim);
+    font-size: .78rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+.timing-slot-btns {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+.slot-apply-btn {
+    background: var(--blue);
+    border: 1px solid #2a6aaa;
+    border-radius: 4px;
+    color: var(--text);
+    cursor: pointer;
+    font-size: .75rem;
+    padding: 3px 10px;
+}
+.slot-apply-btn:hover { background: #2a5a9a; }
+
+/* ── Per-assignment timing row ─────────────────────────────────────────── */
+.assign-timing {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    border-top: 1px solid var(--border);
+    margin-top: 8px;
+    padding-top: 8px;
+}
+.assign-timing input[type="datetime-local"] {
+    font-size: .8rem;
+    padding: 3px 6px;
+}
+.timing-noble-chip {
+    background: rgba(30, 80, 138, 0.4);
+    border: 1px solid #2e5f9a;
+    border-radius: 12px;
+    color: #80b8f0;
+    font-size: .75rem;
+    padding: 2px 10px;
+}
+/* ── Edit mode: remove coord button & add-coord row ─────────────────────── */
+.remove-coord {
+    background: none;
+    border: none;
+    color: #c06060;
+    cursor: pointer;
+    font-size: .75rem;
+    line-height: 1;
+    margin-right: 1px;
+    padding: 0 2px;
+    vertical-align: middle;
+}
+
+.remove-coord:hover { color: #e06060; }
+
+/* Reload (↻) button — always visible on coord tags */
+.reload-coord {
+    background: none;
+    border: none;
+    color: #7aaad0;
+    cursor: pointer;
+    font-size: .78rem;
+    line-height: 1;
+    margin-right: 3px;
+    padding: 0 2px;
+    vertical-align: middle;
+}
+
+.reload-coord:hover    { color: #a0ccf0; }
+.reload-coord:disabled { color: var(--text-dim); cursor: default; }
+
+/* Player name prefix inside a coord tag */
+.tag-player {
+    color: var(--gold-dim);
+    font-size: .75rem;
+    font-weight: 600;
+    margin-right: 3px;
+}
+
+/* Night-send coord tag */
+.coord-tag.night-send {
+    border-color: #2e5080;
+    background:   #0a1830;
+}
+
+.night-mark {
+    font-size: .75rem;
+    margin-left: 3px;
+    vertical-align: middle;
+}
+
+.add-coord-row {
+    align-items: center;
+    display: flex;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.add-coord-input {
+    background: #060d18;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    color: var(--text);
+    font-family: 'Consolas', monospace;
+    font-size: .82rem;
+    padding: 4px 8px;
+    width: 90px;
+}
+

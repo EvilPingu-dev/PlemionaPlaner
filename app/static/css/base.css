@@ -1,0 +1,256 @@
+/* ── Reset & variables ──────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+    --bg:         #0a0e1a;
+    --panel:      #0f1525;
+    --card:       #111827;
+    --border:     #1e3a5f;
+    --gold:       #5b9bd5;      /* "accent" — cornflower/steel blue */
+    --gold-dim:   #2e6099;      /* dimmer accent */
+    --text:       #d0dff0;      /* soft blue-white */
+    --text-dim:   #5a7a9a;      /* muted slate */
+    --green:      #1a6b3c;
+    --green-h:    #228a4e;
+    --blue:       #1a4f8a;
+    --blue-h:     #2060aa;
+    --red:        #7a2020;
+    --radius:     6px;
+    --shadow:     0 2px 14px rgba(0,0,0,.6);
+}
+
+body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    font-size: 14px;
+    min-height: 100vh;
+}
+
+/* ── Header ─────────────────────────────────────────────────────────────── */
+header {
+    background: linear-gradient(180deg, #0d1f3c 0%, #08111f 100%);
+    border-bottom: 2px solid var(--gold);
+    padding: 14px 28px;
+    box-shadow: var(--shadow);
+}
+
+.header-inner {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    max-width: 1100px;
+    margin: 0 auto;
+}
+
+.header-icon {
+    font-size: 2rem;
+    line-height: 1;
+}
+
+header h1 {
+    font-size: 1.4rem;
+    color: var(--gold);
+    letter-spacing: .5px;
+}
+
+.header-sub {
+    color: var(--text-dim);
+    font-size: .8rem;
+    margin-top: 2px;
+}
+
+/* ── Tabs ────────────────────────────────────────────────────────────────── */
+.tabs {
+    background: var(--panel);
+    border-bottom: 2px solid var(--border);
+    display: flex;
+    gap: 2px;
+    padding: 0 28px;
+}
+
+.tab-btn {
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    color: var(--text-dim);
+    cursor: pointer;
+    font-size: .9rem;
+    padding: 11px 20px;
+    transition: color .15s, border-color .15s;
+}
+
+.tab-btn:hover   { color: var(--text); }
+.tab-btn.active  { color: var(--gold); border-bottom-color: var(--gold); }
+
+/* ── Main layout ─────────────────────────────────────────────────────────── */
+main {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 20px 24px 40px;
+}
+
+.tab-pane          { display: none; }
+.tab-pane.active   { display: block; }
+
+/* ── Subtab bar (inside a tab pane) ─────────────────────────────────────── */
+.subtab-bar {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 16px;
+    border-bottom: 2px solid var(--border);
+}
+
+.subtab-btn {
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    color: var(--text-dim);
+    cursor: pointer;
+    font-size: .88rem;
+    margin-bottom: -2px;
+    padding: 8px 18px;
+    transition: color .15s, border-color .15s;
+}
+
+.subtab-btn:hover  { color: var(--text); }
+.subtab-btn.active { color: var(--gold); border-bottom-color: var(--gold); }
+
+.subtab-pane          { display: none; }
+.subtab-pane.active   { display: block; }
+
+/* ── Card ────────────────────────────────────────────────────────────────── */
+.card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    margin-bottom: 16px;
+    padding: 18px 22px;
+}
+
+.card h2 {
+    color: var(--gold);
+    font-size: 1rem;
+    margin-bottom: 10px;
+}
+
+.hint {
+    color: var(--text-dim);
+    font-size: .84rem;
+    line-height: 1.5;
+    margin-bottom: 10px;
+}
+
+.hint code {
+    background: #060d18;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    color: var(--gold);
+    padding: 1px 6px;
+}
+
+/* ── Textarea ────────────────────────────────────────────────────────────── */
+textarea {
+    background: #060d18;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: #a8c8e8;
+    font-size: .82rem;
+    line-height: 1.45;
+    padding: 10px 12px;
+    resize: vertical;
+    width: 100%;
+}
+
+textarea:focus {
+    border-color: var(--gold-dim);
+    outline: none;
+}
+
+/* ── Buttons ─────────────────────────────────────────────────────────────── */
+.btn-row {
+    align-items: center;
+    display: flex;
+    gap: 14px;
+    margin-top: 12px;
+}
+
+.btn {
+    border: none;
+    border-radius: var(--radius);
+    cursor: pointer;
+    font-size: .88rem;
+    font-weight: 600;
+    padding: 8px 22px;
+    transition: background .15s, transform .08s;
+}
+
+.btn:active          { transform: translateY(1px); }
+.btn-primary         { background: var(--blue);  color: #fff; }
+.btn-primary:hover   { background: var(--blue-h); }
+.btn-success         { background: var(--green); color: #fff; }
+.btn-success:hover   { background: var(--green-h); }
+
+.status-msg      { color: var(--text-dim); font-size: .82rem; }
+.status-msg.ok   { color: #4ec97a; }
+.status-msg.err  { color: #e06060; }
+
+/* ── Summary grid ────────────────────────────────────────────────────────── */
+.summary-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.summary-item {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    min-width: 120px;
+    padding: 10px 16px;
+    text-align: center;
+}
+
+.summary-item .val {
+    color: var(--gold);
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+.summary-item .lbl {
+    color: var(--text-dim);
+    font-size: .72rem;
+    margin-top: 3px;
+}
+
+/* ── Tables ──────────────────────────────────────────────────────────────── */
+.table-wrap { overflow-x: auto; }
+
+table {
+    border-collapse: collapse;
+    font-size: .85rem;
+    width: 100%;
+}
+
+th {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    color: var(--gold-dim);
+    font-weight: 600;
+    padding: 7px 12px;
+    text-align: left;
+    white-space: nowrap;
+}
+
+td {
+    border: 1px solid var(--border);
+    padding: 6px 12px;
+}
+
+tr:nth-child(even) td  { background: rgba(255,255,255,.015); }
+tr:hover td            { background: rgba(200,168,75,.07); }
+
+td.dim  { color: var(--text-dim); }
+td code { font-family: 'Consolas', monospace; font-size: .88em; }
+
