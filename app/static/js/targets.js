@@ -82,12 +82,14 @@ async function saveBurzaki() {
 
 function renderBurzaki(items) {
     const BUILDINGS = {
+        '0': 'dowolny',
         '1': 'Ratusz', '2': 'Kuźnia', '3': 'Zagroda',
         '4': 'Tartak', '5': 'Cegielnia', '6': 'Huta Żelaza',
     };
     document.getElementById('burzaki-count').textContent = items.length;
     document.querySelector('#burzaki-table tbody').innerHTML = items.map(it => {
-        const bname = it.building || (it.building_type ? (BUILDINGS[it.building_type] || it.building_type) : '');
+        const btype = String(it.building_type ?? '');
+        const bname = it.building || BUILDINGS[btype] || btype || '';
         return `<tr>
             <td><code>${it.coord}</code></td>
             <td>${it.attacks ?? '<span class="dim">–</span>'}</td>

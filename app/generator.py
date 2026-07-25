@@ -174,22 +174,25 @@ def generate_messages(
         tcoord           = asgn["target"]
         cx, cy           = map(int, tcoord.split('|'))
         t_id             = id_map.get(tcoord)
-        building         = asgn.get("building", "")
-        atype            = f"BURZAK ({building})" if building else "BURZAK"
+        building         = asgn.get("building", "") or "dowolny"
+        atype            = f"BURZAK ({building})"
 
         def _add_burst(coord, _cx=cx, _cy=cy, _tcoord=tcoord, _t_id=t_id,
-                       _atype=atype, _building=building):
+                       _atype=atype, _building=building,
+                       _arrival_dt=arrival_dt_default):
+            if _arrival_dt is None:
+                return
             v = village_by_coord.get(coord)
             if not v:
                 return
             player     = player_by_village.get(coord, "Nieprzypisany")
             d          = euclidean(v["x"], v["y"], _cx, _cy)
             travel_min = d * CAT_SPEED
-            send_dt    = arrival_dt - timedelta(minutes=travel_min)
+            send_dt    = _arrival_dt - timedelta(minutes=travel_min)
             from_id    = id_map.get(coord)
             link       = _attack_link(server, from_id, _t_id, f"Wyślij {_atype}")
             cats       = v.get('cats', 0)
-            burzenie   = f"{cats}×Kata" + (f" → {_building}" if _building else "")
+            burzenie   = f"{cats}×Kata → {_building}"
             player_attacks.setdefault(player, []).append({
                 "type":         _atype,
                 "from_coord":   coord,
@@ -199,7 +202,7 @@ def generate_messages(
                 "burzenie":     burzenie,
                 "send_dt":      send_dt.isoformat(),
                 "send_str":     _fmt_window(send_dt, window_min),
-                "arrival_str":  arrival_str,
+                "arrival_str":  _fmt_window(_arrival_dt, window_min),
                 "distance":     round(d, 2),
                 "travel_min":   round(travel_min, 1),
                 "attack_link":  link,

@@ -5,11 +5,12 @@
 let _statusMap    = {};   // { id: "sent"|"missed"|"unknown" }
 let _statusPlan   = [];   // current assignments snapshot
 let _statusPollId = null; // setInterval handle for live polling
+let _villageIds   = {};   // { coord: gameId }
 
 const STATUS_POLL_MS = 30_000; // refresh every 30 s
 
-function _statusId(fromCoord, target, type) {
-    return `${fromCoord}→${target}:${type}`;
+function _statusId(fromCoord, target, type, idx = 0) {
+    return `${fromCoord}→${target}:${type}#${idx}`;
 }
 
 async function _silentRefreshStatus() {
@@ -63,7 +64,10 @@ async function loadAttackStatus() {
     const msg = document.getElementById('status-tracker-msg');
     setStatus(msg, 'Ładowanie…');
     try {
-        _statusMap = await fetch('/api/attack-status').then(r => r.json());
+        [_statusMap, _villageIds] = await Promise.all([
+            fetch('/api/attack-status').then(r => r.json()),
+            fetch('/api/village-ids').then(r => r.json()).catch(() => ({})),
+        ]);
 
         // Use the already-computed plan from the Rozpiski tab if available,
         // otherwise fall back to the timeline endpoint which reconstructs it.
@@ -125,55 +129,79 @@ function _renderStatusList() {
         return;
     }
 
-    // Group by player
-    const byPlayer = {};
+    // Group by target
+    const byTarget = {};
     for (const asgn of _statusPlan) {
         const tcoord = asgn.target;
+        if (!byTarget[tcoord]) byTarget[tcoord] = [];
+        const countPerCoord = {};
         const addRow = (coord, type) => {
+            const key = `${coord}:${type}`;
+            const idx = (countPerCoord[key] = (countPerCoord[key] ?? -1) + 1);
             const player = _playerByCoord[coord] || '?';
-            if (!byPlayer[player]) byPlayer[player] = [];
-            const id = _statusId(coord, tcoord, type);
-            byPlayer[player].push({ id, coord, tcoord, type, st: _statusMap[id] || 'unknown' });
+            const id = _statusId(coord, tcoord, type, idx);
+            byTarget[tcoord].push({ id, coord, tcoord, type, player, st: _statusMap[id] || 'unknown' });
         };
         for (const c of (asgn.offs || []))   addRow(c, 'OFF');
         for (const c of (asgn.nobles || [])) addRow(c, 'SZLACHCIC');
     }
 
-    const playerOrder = Object.keys(byPlayer).sort();
-    container.innerHTML = playerOrder.map(player => {
-        const rows = byPlayer[player];
-        const total  = rows.length;
-        const sent   = rows.filter(r => r.st === 'sent').length;
-        const missed = rows.filter(r => r.st === 'missed').length;
+    const targetOrder = Object.keys(byTarget).sort();
+
+    const makeRow = (r) => {
+        const fromId = _villageIds[r.coord];
+        const tgtId  = _villageIds[r.tcoord];
+        const server = (_settings && _settings.server) ? _settings.server : '';
+        const gameLink = (fromId && tgtId && server)
+            ? ` <a href="https://pl${server}.plemiona.pl/game.php?village=${fromId}&screen=place&target=${tgtId}" target="_blank" title="Wyślij w grze" style="font-size:.8rem;opacity:.55;text-decoration:none">🔗</a>`
+            : '';
+        return `
+        <tr class="status-row" data-sid="${escHtml(r.id)}" data-status="${r.st}">
+            <td class="st-icon" style="font-size:1.1rem;text-align:center">${r.st === 'sent' ? '✅' : r.st === 'missed' ? '❌' : '❓'}</td>
+            <td><code>${r.coord}</code>${gameLink}</td>
+            <td style="color:${r.type === 'OFF' ? '#cc8844' : '#4488cc'};font-weight:600">${r.type}</td>
+            <td style="color:#aaa;font-size:.85rem">${escHtml(r.player)}</td>
+            <td>
+                <button class="st-btn ${r.st === 'sent'    ? 'active' : ''}" data-sid="${escHtml(r.id)}" data-st="sent"    title="Wysłana">✅</button>
+                <button class="st-btn ${r.st === 'missed'  ? 'active' : ''}" data-sid="${escHtml(r.id)}" data-st="missed"  title="Nie wysłana">❌</button>
+                <button class="st-btn ${r.st === 'unknown' ? 'active' : ''}" data-sid="${escHtml(r.id)}" data-st="unknown" title="Nieznany">❓</button>
+            </td>
+        </tr>`;
+    };
+
+    const makeSide = (rows, title, color) => {
+        if (!rows.length) return `<div style="color:#555;font-size:.85rem;padding:.4rem 0">${title}: brak</div>`;
+        return `<div style="color:${color};font-weight:600;font-size:.85rem;margin-bottom:.3rem">${title}</div>
+            <div class="table-wrap"><table>
+                <thead><tr><th></th><th>Z wioski</th><th>Typ</th><th>Gracz</th><th>Status</th></tr></thead>
+                <tbody>${rows.map(makeRow).join('')}</tbody>
+            </table></div>`;
+    };
+
+    container.innerHTML = targetOrder.map(tcoord => {
+        const rows    = byTarget[tcoord];
+        const total   = rows.length;
+        const sent    = rows.filter(r => r.st === 'sent').length;
+        const missed  = rows.filter(r => r.st === 'missed').length;
         const unknown = rows.filter(r => r.st === 'unknown').length;
 
         const summaryColor = missed > 0 ? '#e06060' : unknown > 0 ? '#e0a030' : '#4ec97a';
         const summaryText  = missed > 0 ? `❌ ${missed} nie wysłano` : unknown > 0 ? `❓ ${unknown} nieznany` : '✅ Wszystko wysłane';
 
-        const rowsHtml = rows.map(r => `
-            <tr class="status-row" data-sid="${escHtml(r.id)}" data-status="${r.st}">
-                <td class="st-icon" style="font-size:1.1rem;text-align:center">${r.st === 'sent' ? '✅' : r.st === 'missed' ? '❌' : '❓'}</td>
-                <td><code>${r.coord}</code></td>
-                <td style="color:${r.type === 'OFF' ? '#cc8844' : '#4488cc'};font-weight:600">${r.type}</td>
-                <td><code>${r.tcoord}</code></td>
-                <td>
-                    <button class="st-btn ${r.st === 'sent'    ? 'active' : ''}" data-sid="${escHtml(r.id)}" data-st="sent"    title="Wysłana">✅</button>
-                    <button class="st-btn ${r.st === 'missed'  ? 'active' : ''}" data-sid="${escHtml(r.id)}" data-st="missed"  title="Nie wysłana">❌</button>
-                    <button class="st-btn ${r.st === 'unknown' ? 'active' : ''}" data-sid="${escHtml(r.id)}" data-st="unknown" title="Nieznany">❓</button>
-                </td>
-            </tr>`).join('');
+        const needRows = rows.filter(r => r.st !== 'sent');
+        const sentRows = rows.filter(r => r.st === 'sent');
 
         return `<div class="card status-player-card">
             <div class="status-player-header">
-                <span class="status-player-name">👤 <strong>${escHtml(player)}</strong></span>
+                <span class="status-player-name">🎯 Cel: <strong><code>${escHtml(tcoord)}</code></strong></span>
                 <span class="status-player-summary" style="color:${summaryColor}">${summaryText}</span>
                 <span class="status-counts">${sent}/${total} wysłanych</span>
-                <button class="btn btn-sm" data-mark-all="${escHtml(player)}" style="margin-left:auto">✅ Wszystkie wysłane</button>
+                <button class="btn btn-sm" data-mark-all-target="${escHtml(tcoord)}" style="margin-left:auto">✅ Wszystkie wysłane</button>
             </div>
-            <div class="table-wrap"><table>
-                <thead><tr><th></th><th>Z wioski</th><th>Typ</th><th>Cel</th><th>Status</th></tr></thead>
-                <tbody>${rowsHtml}</tbody>
-            </table></div>
+            <div class="status-split">
+                <div>${makeSide(needRows, '❌❓ Brakujące / Nieznane', '#e06060')}</div>
+                <div>${makeSide(sentRows, '✅ Wysłane', '#4ec97a')}</div>
+            </div>
         </div>`;
     }).join('');
 
@@ -182,19 +210,23 @@ function _renderStatusList() {
         btn.addEventListener('click', () => _setStatus(btn.dataset.sid, btn.dataset.st));
     });
 
-    // Wire per-player "mark all sent" buttons
-    container.querySelectorAll('[data-mark-all]').forEach(btn => {
+    // Wire per-target "mark all sent" buttons
+    container.querySelectorAll('[data-mark-all-target]').forEach(btn => {
         btn.addEventListener('click', async () => {
-            const player = btn.dataset.markAll;
+            const tcoord = btn.dataset.markAllTarget;
             const updates = {};
             for (const asgn of _statusPlan) {
+                if (asgn.target !== tcoord) continue;
+                const cnt = {};
                 for (const c of (asgn.offs || [])) {
-                    if ((_playerByCoord[c] || '?') === player)
-                        updates[_statusId(c, asgn.target, 'OFF')] = 'sent';
+                    const k = `${c}:OFF`;
+                    const i = (cnt[k] = (cnt[k] ?? -1) + 1);
+                    updates[_statusId(c, tcoord, 'OFF', i)] = 'sent';
                 }
                 for (const c of (asgn.nobles || [])) {
-                    if ((_playerByCoord[c] || '?') === player)
-                        updates[_statusId(c, asgn.target, 'SZLACHCIC')] = 'sent';
+                    const k = `${c}:SZLACHCIC`;
+                    const i = (cnt[k] = (cnt[k] ?? -1) + 1);
+                    updates[_statusId(c, tcoord, 'SZLACHCIC', i)] = 'sent';
                 }
             }
             Object.assign(_statusMap, updates);
@@ -239,10 +271,17 @@ async function _generateCoveragePost() {
 async function _markAllSent() {
     const updates = {};
     for (const asgn of _statusPlan) {
-        for (const c of (asgn.offs || []))
-            updates[_statusId(c, asgn.target, 'OFF')] = 'sent';
-        for (const c of (asgn.nobles || []))
-            updates[_statusId(c, asgn.target, 'SZLACHCIC')] = 'sent';
+        const cnt = {};
+        for (const c of (asgn.offs || [])) {
+            const k = `${c}:OFF`;
+            const i = (cnt[k] = (cnt[k] ?? -1) + 1);
+            updates[_statusId(c, asgn.target, 'OFF', i)] = 'sent';
+        }
+        for (const c of (asgn.nobles || [])) {
+            const k = `${c}:SZLACHCIC`;
+            const i = (cnt[k] = (cnt[k] ?? -1) + 1);
+            updates[_statusId(c, asgn.target, 'SZLACHCIC', i)] = 'sent';
+        }
     }
     Object.assign(_statusMap, updates);
     await fetch('/api/attack-status', {

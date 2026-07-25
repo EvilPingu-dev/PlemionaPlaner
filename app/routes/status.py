@@ -16,8 +16,8 @@ from ..storage import (
 bp = Blueprint("status", __name__)
 
 
-def _status_id(from_coord: str, target: str, atype: str) -> str:
-    return f"{from_coord}→{target}:{atype}"
+def _status_id(from_coord: str, target: str, atype: str, idx: int = 0) -> str:
+    return f"{from_coord}→{target}:{atype}#{idx}"
 
 
 # ── CRUD ──────────────────────────────────────────────────────────────────────
@@ -86,10 +86,13 @@ def coverage_post():
     for asgn in assignments:
         tcoord = asgn["target"]
         tx, ty = map(int, tcoord.split("|"))
+        _occ: dict[str, int] = {}
 
         for coord in asgn.get("offs", []):
             all_assigned_coords.add(coord)
-            if status_map.get(_status_id(coord, tcoord, "OFF")) == "missed":
+            _occ[f"{coord}:OFF"] = _occ.get(f"{coord}:OFF", -1) + 1
+            idx = _occ[f"{coord}:OFF"]
+            if status_map.get(_status_id(coord, tcoord, "OFF", idx)) == "missed":
                 d = next((d.get("dist") for d in (asgn.get("offs_detail") or []) if d["coord"] == coord), None)
                 missed_attacks.append({
                     "coord": coord, "target": tcoord, "type": "OFF",
@@ -99,7 +102,9 @@ def coverage_post():
 
         for coord in asgn.get("nobles", []):
             all_assigned_coords.add(coord)
-            if status_map.get(_status_id(coord, tcoord, "SZLACHCIC")) == "missed":
+            _occ[f"{coord}:SZLACHCIC"] = _occ.get(f"{coord}:SZLACHCIC", -1) + 1
+            idx = _occ[f"{coord}:SZLACHCIC"]
+            if status_map.get(_status_id(coord, tcoord, "SZLACHCIC", idx)) == "missed":
                 d = next((d.get("dist") for d in (asgn.get("nobles_detail") or []) if d["coord"] == coord), None)
                 missed_attacks.append({
                     "coord": coord, "target": tcoord, "type": "SZLACHCIC",

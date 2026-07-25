@@ -1,5 +1,47 @@
 /* ── WIADOMOŚCI ─────────────────────────────────────────────────────────── */
 
+(function () {
+    function _setSetupVisible(visible) {
+        const guide = document.getElementById('userscript-setup');
+        const showBtn = document.getElementById('btn-show-setup');
+        if (guide)   guide.style.display   = visible ? '' : 'none';
+        if (showBtn) showBtn.style.display  = visible ? 'none' : '';
+        localStorage.setItem('tw_setup_hidden', visible ? '0' : '1');
+    }
+
+    // Restore saved preference
+    if (localStorage.getItem('tw_setup_hidden') === '1') _setSetupVisible(false);
+
+    document.addEventListener('click', function (e) {
+        if (!e.target) return;
+        if (e.target.id === 'btn-hide-setup')  _setSetupVisible(false);
+        if (e.target.id === 'btn-show-setup')  _setSetupVisible(true);
+
+        if (e.target.id === 'btn-show-manual-install') {
+            const box = document.getElementById('manual-install-box');
+            if (!box) return;
+            box.style.display = box.style.display === 'none' ? '' : 'none';
+            if (box.style.display !== 'none') {
+                // Fetch and display the userscript source
+                const ta = document.getElementById('userscript-code-ta');
+                if (ta && !ta.value) {
+                    fetch('/tw-mail.user.js').then(r => r.text()).then(t => { ta.value = t; });
+                }
+            }
+        }
+
+        if (e.target.id === 'btn-copy-userscript') {
+            const ta = document.getElementById('userscript-code-ta');
+            if (!ta) return;
+            navigator.clipboard.writeText(ta.value).then(() => {
+                const orig = e.target.textContent;
+                e.target.textContent = '✓ Skopiowano!';
+                setTimeout(() => e.target.textContent = orig, 2000);
+            });
+        }
+    });
+})();
+
 async function generateMessages() {
     const status = document.getElementById('messages-status');
     setStatus(status, 'Generowanie…');
@@ -71,7 +113,7 @@ function renderMessages(messages) {
         }).join('');
 
         const mailBtn = m.mail_link
-            ? `<a class="btn btn-mail" href="${m.mail_link}" target="_blank" rel="noopener">✉ Otwórz w TW</a>`
+            ? `<button class="btn btn-mail" data-idx="${idx}" data-link="${escAttr(m.mail_link)}">✉ Wyślij w TW</button>`
             : '';
 
         return `<div class="card msg-card">
@@ -104,6 +146,20 @@ function renderMessages(messages) {
                 const orig = btn.textContent;
                 btn.textContent = '✓ Skopiowano!';
                 setTimeout(() => btn.textContent = orig, 2000);
+            });
+        });
+    });
+
+    container.querySelectorAll('.btn-mail').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const idx = parseInt(btn.dataset.idx);
+            // window.open must be called synchronously (in the click handler)
+            // to avoid popup blockers — clipboard copy runs after
+            window.open(btn.dataset.link, '_blank', 'noopener');
+            navigator.clipboard.writeText(messages[idx].message).then(() => {
+                const orig = btn.textContent;
+                btn.textContent = '✓ Skopiowano treść!';
+                setTimeout(() => btn.textContent = orig, 3000);
             });
         });
     });

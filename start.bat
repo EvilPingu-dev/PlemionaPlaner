@@ -26,7 +26,8 @@ if %errorlevel% == 0 (
         echo        Aplikacja jest aktualna.
     ) else (
         echo        Znaleziono %BEHIND% nowe aktualizacje - pobieranie...
-        git pull origin main
+        git fetch origin main
+        git reset --hard origin/main
         echo        Gotowe - aplikacja zaktualizowana.
     )
     goto update_done

@@ -218,3 +218,14 @@ details[open].script-card summary::before { content: '▼ '; }
 tr.status-row[data-status="sent"]    td { background: rgba(10, 60, 20, .25); }
 tr.status-row[data-status="missed"]  td { background: rgba(80, 10, 10, .35); }
 tr.status-row[data-status="unknown"] td { background: transparent; }
+
+.status-split {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: 1fr 1fr;
+    margin-top: .5rem;
+}
+
+@media (max-width: 700px) {
+    .status-split { grid-template-columns: 1fr; }
+}

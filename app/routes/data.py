@@ -75,6 +75,7 @@ def save_fake_targets():
 # ── Burst targets ─────────────────────────────────────────────────────────────
 
 BUILDINGS = {
+    '0': 'dowolny',
     '1': 'Ratusz', '2': 'Kuźnia', '3': 'Zagroda',
     '4': 'Tartak', '5': 'Cegielnia', '6': 'Huta Żelaza',
 }
@@ -82,7 +83,12 @@ BUILDINGS = {
 
 @bp.get("/api/burst-targets")
 def get_burst_targets():
-    return jsonify(load_json(BURST_TARGETS_FILE))
+    items = load_json(BURST_TARGETS_FILE) or []
+    # Back-fill building name in case items were saved before '0' was in BUILDINGS
+    for it in items:
+        if not it.get("building"):
+            it["building"] = BUILDINGS.get(str(it.get("building_type", "")), "dowolny")
+    return jsonify(items)
 
 
 @bp.post("/api/burst-targets")

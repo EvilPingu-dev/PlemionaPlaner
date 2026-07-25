@@ -353,9 +353,70 @@ void 0;</pre>
         </p>
         <div class="btn-row">
             <button class="btn btn-success" id="btn-gen-messages">📨 Generuj wiadomości</button>
+            <button class="btn btn-sm" id="btn-show-setup" style="display:none" title="Pokaż przewodnik instalacji skryptu">⚙ Pokaż przewodnik</button>
             <span class="status-msg" id="messages-status"></span>
         </div>
     </div>
+
+    <!-- Userscript setup guide -->
+    <div class="card" id="userscript-setup">
+        <h3 style="margin-top:0">⚙ Jednorazowa konfiguracja – automatyczne wypełnianie wiadomości</h3>
+        <p class="hint">Aby przycisk <strong>✉ Wyślij w TW</strong> automatycznie wypełniał odbiorcę, temat i treść, wykonaj trzy kroki:</p>
+
+        <div class="setup-steps">
+            <div class="setup-step">
+                <span class="setup-num">1</span>
+                <div>
+                    <strong>Zainstaluj rozszerzenie do skryptów w swojej przeglądarce:</strong>
+                    <p class="hint" style="margin:4px 0 6px">Zalecane: <strong>Violentmonkey</strong> (Chrome/Edge) i <strong>Greasemonkey</strong> (Firefox)</p>
+                    <div class="btn-row" style="margin-top:4px;flex-wrap:wrap;gap:6px">
+                        <a class="btn btn-sm btn-success" href="https://chromewebstore.google.com/detail/violentmonkey/jinjaccalgkegednnccohejagnlnfdag" target="_blank" rel="noopener">🟢 Violentmonkey – Chrome</a>
+                        <a class="btn btn-sm btn-success" href="https://microsoftedge.microsoft.com/addons/detail/violentmonkey/eeagobfjdenkkddmbclomhiblgggliao" target="_blank" rel="noopener">🟢 Violentmonkey – Edge</a>
+                        <a class="btn btn-sm btn-success" href="https://addons.mozilla.org/firefox/addon/greasemonkey/" target="_blank" rel="noopener">🦊 Greasemonkey – Firefox</a>
+                        <a class="btn btn-sm" href="https://addons.mozilla.org/firefox/addon/violentmonkey/" target="_blank" rel="noopener">🟢 Violentmonkey – Firefox</a>
+                        <a class="btn btn-sm" href="https://chromewebstore.google.com/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo" target="_blank" rel="noopener">🟡 Tampermonkey – Chrome</a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="setup-step" style="margin-top:12px">
+                <span class="setup-num">2</span>
+                <div>
+                    <strong>Zainstaluj skrypt</strong> – wypróbuj oba sposoby:
+                    <div class="btn-row" style="margin-top:6px;flex-wrap:wrap;gap:8px">
+                        <a class="btn btn-success" href="/tw-mail.user.js" target="_blank" rel="noopener">⬇ Auto-instalacja (kliknij)</a>
+                        <button class="btn btn-sm" id="btn-show-manual-install">📋 Instalacja ręczna (kopiuj kod)</button>
+                    </div>
+                    <div id="manual-install-box" style="display:none;margin-top:10px">
+                        <p class="hint" style="margin-bottom:6px">
+                            Otwórz Violentmonkey → kliknij <strong>+</strong> (nowy skrypt) → zaznacz wszystko i wklej poniższy kod → <strong>Ctrl+S</strong> aby zapisać:
+                        </p>
+                        <textarea id="userscript-code-ta" class="bbcode-ta" rows="6" readonly></textarea>
+                        <div class="btn-row" style="margin-top:6px">
+                            <button class="btn btn-sm btn-success" id="btn-copy-userscript">📋 Kopiuj kod skryptu</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="setup-step" style="margin-top:12px">
+                <span class="setup-num">3</span>
+                <div>
+                    <strong>Chrome: włącz userscripts (jednorazowo)</strong>
+                    <ol class="hint" style="margin:6px 0 0 16px;line-height:1.9">
+                        <li>Kliknij ikonę puzzla (Rozszerzenia) na pasku Chrome → trzy kropki obok Violentmonkey → <strong>Zarządzaj rozszerzeniem</strong></li>
+                        <li>Na stronie szczegółów znajdź przełącznik <strong>„Zezwalaj na skrypty użytkownika"</strong> / <strong>„Allow user scripts"</strong> i <strong>włącz go</strong></li>
+                        <li>Chrome wyświetli ostrzeżenie bezpieczeństwa – kliknij <strong>Zezwól</strong> / <strong>Allow</strong> (to normalne dla wszystkich skryptów użytkownika)</li>
+                        <li>Wróć na stronę Tribal Wars, odśwież ją i sprawdź czy ikona Violentmonkey pokazuje aktywny skrypt</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+
+        <p class="hint" style="margin-top:10px">Po wykonaniu obu kroków przycisk <strong>✉ Wyślij w TW</strong> będzie automatycznie wypełniał formularz wiadomości w grze. Konfiguracja jest jednorazowa.</p>
+        <button class="btn btn-sm" id="btn-hide-setup" style="margin-top:4px">✕ Ukryj ten przewodnik</button>
+    </div>
+
     <div id="messages-output"></div>
 </section>
 

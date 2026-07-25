@@ -191,6 +191,23 @@ textarea:focus {
 .btn-primary:hover   { background: var(--blue-h); }
 .btn-success         { background: var(--green); color: #fff; }
 .btn-success:hover   { background: var(--green-h); }
+.btn-sm              { font-size: .78rem; padding: 5px 12px; }
+
+/* ── Userscript setup guide ──────────────────────────────────────────────── */
+.setup-steps   { display: flex; flex-direction: column; gap: 6px; }
+.setup-step    { display: flex; gap: 12px; align-items: flex-start; }
+.setup-num     {
+    background: var(--blue);
+    border-radius: 50%;
+    color: #fff;
+    flex-shrink: 0;
+    font-size: .8rem;
+    font-weight: 700;
+    height: 22px;
+    line-height: 22px;
+    text-align: center;
+    width: 22px;
+}
 
 .status-msg      { color: var(--text-dim); font-size: .82rem; }
 .status-msg.ok   { color: #4ec97a; }
