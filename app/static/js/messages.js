@@ -52,7 +52,7 @@ async function generateMessages() {
         const offDt = dtInput ? dtInput.value : (a.arrival_dt || '');
         let nobleDt = offDt;
         if (offDt && gapMs > 0)
-            nobleDt = new Date(new Date(offDt).getTime() + gapMs).toISOString().slice(0, 23);
+            nobleDt = _toLocalISOString(new Date(new Date(offDt).getTime() + gapMs));
         return { ...a, arrival_dt: offDt || a.arrival_dt, noble_arrival_dt: nobleDt || a.noble_arrival_dt };
     });
 

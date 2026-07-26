@@ -27,7 +27,7 @@ async function generateTimeline() {
             const offDt = dtInput ? dtInput.value : (a.arrival_dt || '');
             let nobleDt = offDt;
             if (offDt && gapMs > 0)
-                nobleDt = new Date(new Date(offDt).getTime() + gapMs).toISOString().slice(0, 23);
+                nobleDt = _toLocalISOString(new Date(new Date(offDt).getTime() + gapMs));
             return { ...a, arrival_dt: offDt || a.arrival_dt, noble_arrival_dt: nobleDt || a.noble_arrival_dt };
         }),
     };
@@ -96,7 +96,7 @@ async function validatePlan() {
             const offDt = dtInput ? dtInput.value : (a.arrival_dt || '');
             let nobleDt = offDt;
             if (offDt && gapMs > 0)
-                nobleDt = new Date(new Date(offDt).getTime() + gapMs).toISOString().slice(0, 23);
+                nobleDt = _toLocalISOString(new Date(new Date(offDt).getTime() + gapMs));
             return { ...a, arrival_dt: offDt || a.arrival_dt, noble_arrival_dt: nobleDt || a.noble_arrival_dt };
         }),
     };
@@ -164,7 +164,7 @@ async function exportCsv() {
             const offDt   = dtInput ? dtInput.value : (a.arrival_dt || '');
             let nobleDt   = offDt;
             if (offDt && gapMs > 0)
-                nobleDt = new Date(new Date(offDt).getTime() + gapMs).toISOString().slice(0, 23);
+                nobleDt = _toLocalISOString(new Date(new Date(offDt).getTime() + gapMs));
             return { ...a, arrival_dt: offDt || a.arrival_dt, noble_arrival_dt: nobleDt || a.noble_arrival_dt };
         }),
     };
@@ -189,7 +189,7 @@ async function exportForumPlayers(targetEl, statusEl) {
             const offDt   = dtInput ? dtInput.value : (a.arrival_dt || '');
             let nobleDt   = offDt;
             if (offDt && gapMs > 0)
-                nobleDt = new Date(new Date(offDt).getTime() + gapMs).toISOString().slice(0, 23);
+                nobleDt = _toLocalISOString(new Date(new Date(offDt).getTime() + gapMs));
             return { ...a, arrival_dt: offDt || a.arrival_dt, noble_arrival_dt: nobleDt || a.noble_arrival_dt };
         }),
     };
@@ -255,7 +255,7 @@ function calcReturns() {
         const offDt   = dtInput ? dtInput.value : (a.arrival_dt || '');
         let nobleDt   = offDt;
         if (offDt && gapMs > 0)
-            nobleDt = new Date(new Date(offDt).getTime() + gapMs).toISOString().slice(0, 23);
+            nobleDt = _toLocalISOString(new Date(new Date(offDt).getTime() + gapMs));
 
         for (const d of (a.offs_detail || [])) {
             if (!d.dist || !offDt) continue;

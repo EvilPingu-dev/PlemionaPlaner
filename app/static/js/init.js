@@ -92,7 +92,7 @@ document.getElementById('btn-apply-gap').addEventListener('click', () => {
         const dtInput = document.querySelector(`.asgn-off-dt[data-aidx="${aIdx}"]`);
         const offDt   = dtInput ? dtInput.value : (a.arrival_dt || '');
         if (offDt && gapMs > 0)
-            a.noble_arrival_dt = new Date(new Date(offDt).getTime() + gapMs).toISOString().slice(0, 23);
+            a.noble_arrival_dt = _toLocalISOString(new Date(new Date(offDt).getTime() + gapMs));
         else
             a.noble_arrival_dt = offDt || a.arrival_dt;
         a.arrival_dt = offDt || a.arrival_dt;

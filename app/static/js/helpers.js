@@ -49,3 +49,13 @@ function escHtml(str) {
 function escAttr(str) {
     return str.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
+
+/** Format a Date as a local-time ISO string (YYYY-MM-DDTHH:mm:ss.mmm).
+ *  Unlike toISOString() this does NOT convert to UTC, preventing the
+ *  noble arrival time from being shifted by the user's UTC offset. */
+function _toLocalISOString(d) {
+    const pad = n => String(n).padStart(2, '0');
+    const ms  = String(d.getMilliseconds()).padStart(3, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}` +
+           `T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}.${ms}`;
+}
