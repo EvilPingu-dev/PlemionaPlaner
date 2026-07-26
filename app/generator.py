@@ -194,9 +194,14 @@ def generate_messages(
             v_off = village_by_coord.get(coord)
             v_spd = ram_speed if (v_off and v_off.get("rams", 0) > 0) else off_speed
             _add(coord, "OFF", v_spd)
-        for coord in asgn.get("nobles", []):
-            _add(coord, "SZLACHCIC", noble_speed, noble_cnt=1,
-                 _arr_dt=noble_arrival_dt, _arr_str=noble_arrival_str)
+        _nobles_detail = asgn.get("nobles_detail", [])
+        for _n_i, coord in enumerate(asgn.get("nobles", [])):
+            _n_det   = _nobles_detail[_n_i] if _n_i < len(_nobles_detail) else {}
+            _is_conq = _n_det.get("is_conqueror", False)
+            _n_arr    = noble_arrival_dt + timedelta(seconds=5) if _is_conq else noble_arrival_dt
+            _n_arrstr = _fmt_window(_n_arr, window_min) if _is_conq else noble_arrival_str
+            _add(coord, "SZLACHCIC ♛" if _is_conq else "SZLACHCIC", noble_speed, noble_cnt=1,
+                 _arr_dt=_n_arr, _arr_str=_n_arrstr)
 
     # ── Burzaki ───────────────────────────────────────────────────────────
     CAT_SPEED = 30.0  # catapult travel speed (PL server)

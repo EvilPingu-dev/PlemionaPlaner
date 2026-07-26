@@ -255,6 +255,29 @@
 }
 .pick-coord:hover { color: #a0ccf0; }
 
+/* Crown (conqueror) button */
+.crown-coord {
+    background: none;
+    border: none;
+    color: #555;
+    cursor: pointer;
+    font-size: .72rem;
+    line-height: 1;
+    margin-right: 1px;
+    padding: 0 1px;
+    vertical-align: middle;
+    filter: grayscale(1) opacity(.4);
+    transition: filter .15s;
+}
+.crown-coord:hover  { filter: grayscale(.2) opacity(.8); }
+.crown-coord.crown-active { filter: none; }
+
+/* Conqueror tag highlight */
+.coord-tag.conqueror-tag {
+    border-color: #c8a020;
+    background: #1a1400;
+}
+
 /* Candidates popup */
 #candidates-popup {
     background: #0d1a2e;

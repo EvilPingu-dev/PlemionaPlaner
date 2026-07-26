@@ -101,11 +101,20 @@ function _renderAssignments(assignments, editMode) {
                 : '';
             const reloadBtn = `<button class="reload-coord" data-aidx="${aIdx}" data-key="${key}" data-cidx="${idx}" data-coord="${d.coord}" data-target="${a.target}" title="Zamień na następną najlepszą wioskę">↻</button>`;
             const pickBtn  = `<button class="pick-coord"   data-aidx="${aIdx}" data-key="${key}" data-cidx="${idx}" data-coord="${d.coord}" data-target="${a.target}" title="Wybierz z listy">▾</button>`;
-            return `<span class="coord-tag ${cls}${isNight ? ' night-send' : ''}" draggable="true" data-aidx="${aIdx}" data-key="${key}" data-cidx="${idx}">${removeBtn}${reloadBtn}${pickBtn}${playerSpan}${d.coord}${distStr}${nightMark}</span>`;
+            const crownBtn = key === 'nobles'
+                ? `<button class="crown-coord${d.is_conqueror ? ' crown-active' : ''}" data-aidx="${aIdx}" data-cidx="${idx}" title="${d.is_conqueror ? 'Zdobywca (kliknij by odznaczać)' : 'Oznacz jako zdobywcę (+5s później)'}">👑</button>`
+                : '';
+            return `<span class="coord-tag ${cls}${isNight ? ' night-send' : ''}${d.is_conqueror ? ' conqueror-tag' : ''}" draggable="true" data-aidx="${aIdx}" data-key="${key}" data-cidx="${idx}">${removeBtn}${reloadBtn}${pickBtn}${crownBtn}${playerSpan}${d.coord}${distStr}${nightMark}</span>`;
         };
 
         const offTags   = (a.offs_detail   || a.offs.map(c   => ({coord: c, dist: null}))).map((d, i) => makeTag(d, offSpeed,   '',          'offs',   i, offArrivalStr)).join('');
-        const nobleTags = (a.nobles_detail || a.nobles.map(c => ({coord: c, dist: null}))).map((d, i) => makeTag(d, nobleSpeed, 'noble-tag', 'nobles', i, nobleArrivalStr)).join('');
+        const CONQ_OFFSET_MS = 5000;
+        const nobleTags = (a.nobles_detail || a.nobles.map(c => ({coord: c, dist: null}))).map((d, i) => {
+            const arrStr = (d.is_conqueror && nobleArrivalStr)
+                ? new Date(new Date(nobleArrivalStr).getTime() + CONQ_OFFSET_MS).toISOString().slice(0, 19)
+                : nobleArrivalStr;
+            return makeTag(d, nobleSpeed, 'noble-tag', 'nobles', i, arrStr);
+        }).join('');
 
         const addOffInput   = editMode ? `<div class="add-coord-row"><input class="add-coord-input" placeholder="x|y" data-aidx="${aIdx}" data-key="offs"><button class="btn btn-sm add-coord-btn" data-aidx="${aIdx}" data-key="offs">+ Dodaj off</button></div>` : '';
         const addNobleInput = editMode ? `<div class="add-coord-row"><input class="add-coord-input" placeholder="x|y" data-aidx="${aIdx}" data-key="nobles"><button class="btn btn-sm add-coord-btn" data-aidx="${aIdx}" data-key="nobles">+ Dodaj szlachcica</button></div>` : '';
@@ -226,6 +235,22 @@ function _renderAssignments(assignments, editMode) {
                 detail.splice(toCidx, 0, movedDetail);
             }
             _dragSrc = null;
+            _renderAssignments(_currentAssignments, _planEditMode);
+            _saveCurrentPlan();
+        });
+    });
+
+    // ── Crown (conqueror) toggle — always active ──────────────────────────
+    document.querySelectorAll('.crown-coord').forEach(btn => {
+        btn.addEventListener('click', e => {
+            e.stopPropagation();
+            const aIdx = parseInt(btn.dataset.aidx);
+            const cidx = parseInt(btn.dataset.cidx);
+            const a    = _currentAssignments[aIdx];
+            if (!a.nobles_detail) a.nobles_detail = (a.nobles || []).map(c => ({ coord: c, dist: null }));
+            const wasConq = !!a.nobles_detail[cidx]?.is_conqueror;
+            a.nobles_detail.forEach(d => { d.is_conqueror = false; });
+            if (!wasConq && a.nobles_detail[cidx]) a.nobles_detail[cidx].is_conqueror = true;
             _renderAssignments(_currentAssignments, _planEditMode);
             _saveCurrentPlan();
         });
