@@ -184,30 +184,34 @@
     margin-left: 6px;
 }
 .slot-apply-single {
-    background: #0e2040;
-    border: 1px solid #2a5080;
     border-radius: 4px;
-    color: #9ac0e8;
     cursor: pointer;
     font-size: .76rem;
     padding: 2px 8px;
     white-space: nowrap;
+    border: 1px solid;
 }
-.slot-apply-single:hover {
-    background: #1a3a70;
-    border-color: #4a80c0;
-    color: #c8e4ff;
-}
+.slot-apply-single:nth-child(6n+1) { background:#0e2a14; border-color:#2a6a3a; color:#80d898; }
+.slot-apply-single:nth-child(6n+2) { background:#1a1a08; border-color:#6a5a10; color:#d4b840; }
+.slot-apply-single:nth-child(6n+3) { background:#0e1a30; border-color:#2a4a8a; color:#80a8e8; }
+.slot-apply-single:nth-child(6n+4) { background:#280e2a; border-color:#6a2a6a; color:#d880d8; }
+.slot-apply-single:nth-child(6n+5) { background:#2a1008; border-color:#8a3a18; color:#e89060; }
+.slot-apply-single:nth-child(6n+0) { background:#081a2a; border-color:#186878; color:#60c8d8; }
+.slot-apply-single:hover { filter: brightness(1.35); }
 .slot-apply-btn {
-    background: var(--blue);
-    border: 1px solid #2a6aaa;
     border-radius: 4px;
-    color: var(--text);
     cursor: pointer;
     font-size: .75rem;
     padding: 3px 10px;
+    border: 1px solid;
 }
-.slot-apply-btn:hover { background: #2a5a9a; }
+.slot-apply-btn:nth-child(6n+1) { background:#0e2a14; border-color:#2a6a3a; color:#80d898; }
+.slot-apply-btn:nth-child(6n+2) { background:#1a1a08; border-color:#6a5a10; color:#d4b840; }
+.slot-apply-btn:nth-child(6n+3) { background:#0e1a30; border-color:#2a4a8a; color:#80a8e8; }
+.slot-apply-btn:nth-child(6n+4) { background:#280e2a; border-color:#6a2a6a; color:#d880d8; }
+.slot-apply-btn:nth-child(6n+5) { background:#2a1008; border-color:#8a3a18; color:#e89060; }
+.slot-apply-btn:nth-child(6n+0) { background:#081a2a; border-color:#186878; color:#60c8d8; }
+.slot-apply-btn:hover { filter: brightness(1.35); }
 
 /* ── Per-assignment timing row ─────────────────────────────────────────── */
 .assign-timing {
