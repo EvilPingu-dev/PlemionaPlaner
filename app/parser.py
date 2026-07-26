@@ -21,7 +21,7 @@ TROOP_COLS = [
     "outside",    # Poza wioską
 ]
 
-OFF_KEYS  = {"axe", "light", "heavy"}
+OFF_KEYS  = {"axe", "light"}
 NOBLE_KEY = "noble"
 CAT_KEY   = "cat"
 RAM_KEY   = "ram"
