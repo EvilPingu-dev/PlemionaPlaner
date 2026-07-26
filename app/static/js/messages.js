@@ -130,19 +130,22 @@ function renderMessages(messages) {
                 ${mailBtn}
                 <button class="btn btn-copy" data-idx="${idx}" title="Kopiuj BBCode">📋 Kopiuj BBCode</button>
             </div>
-            <div class="msg-attacks">
-                <table>
-                    <thead><tr>
-                        <th>Link</th><th>Typ</th><th>Z wioski</th><th>Cel</th>
-                        <th>Dystans</th><th>Podróż</th><th>Wysyłka o</th>
-                        <th>OFF</th><th>Szlach.</th><th>Burzenie/Katy</th>
-                    </tr></thead>
-                    <tbody>${attackRows}</tbody>
-                </table>
-            </div>
-            <details class="bbcode-wrap">
-                <summary>Pokaż BBCode</summary>
-                <textarea class="bbcode-ta" rows="12" readonly>${escHtml(m.message)}</textarea>
+            <details class="msg-spoiler">
+                <summary>Szczegóły (${ownCount} wysyłek)</summary>
+                <div class="msg-attacks">
+                    <table>
+                        <thead><tr>
+                            <th>Link</th><th>Typ</th><th>Z wioski</th><th>Cel</th>
+                            <th>Dystans</th><th>Podróż</th><th>Wysyłka o</th>
+                            <th>OFF</th><th>Szlach.</th><th>Burzenie/Katy</th>
+                        </tr></thead>
+                        <tbody>${attackRows}</tbody>
+                    </table>
+                </div>
+                <details class="bbcode-wrap">
+                    <summary>Pokaż BBCode</summary>
+                    <textarea class="bbcode-ta" rows="12" readonly>${escHtml(m.message)}</textarea>
+                </details>
             </details>
         </div>`;
     }).join('');

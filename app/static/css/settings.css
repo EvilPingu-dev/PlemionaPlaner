@@ -241,6 +241,18 @@
     user-select: none;
 }
 
+.msg-spoiler { margin-top: 6px; }
+.msg-spoiler > summary {
+    cursor: pointer;
+    font-size: .85rem;
+    color: var(--text-dim);
+    padding: 4px 0;
+    user-select: none;
+    list-style: none;
+}
+.msg-spoiler > summary::before { content: '▶ '; font-size: .75rem; }
+.msg-spoiler[open] > summary::before { content: '▼ '; font-size: .75rem; }
+
 .bbcode-ta {
     background: #080604;
     border: 1px solid var(--border);
