@@ -111,7 +111,7 @@ function _renderAssignments(assignments, editMode) {
         const CONQ_OFFSET_MS = 5000;
         const nobleTags = (a.nobles_detail || a.nobles.map(c => ({coord: c, dist: null}))).map((d, i) => {
             const arrStr = (d.is_conqueror && nobleArrivalStr)
-                ? new Date(new Date(nobleArrivalStr).getTime() + CONQ_OFFSET_MS).toISOString().slice(0, 19)
+                ? _localIsoAdd(nobleArrivalStr, CONQ_OFFSET_MS)
                 : nobleArrivalStr;
             return makeTag(d, nobleSpeed, 'noble-tag', 'nobles', i, arrStr);
         }).join('');
@@ -322,6 +322,14 @@ function _renderFakeAssignments(fakeAssignments) {
 function calcSendStr(arrivalIso, travelMinutes) {
     const d  = new Date(new Date(arrivalIso).getTime() - travelMinutes * 60000);
     return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}`;
+}
+
+/** Add `deltaMs` to a local-time ISO string and return a local-time ISO string.
+ *  Avoids toISOString() which would convert to UTC and cause a double-offset bug. */
+function _localIsoAdd(localIso, deltaMs) {
+    const d   = new Date(new Date(localIso).getTime() + deltaMs);
+    const pad = n => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 }
 
 function _isSendNight(arrivalIso, travelMinutes) {
