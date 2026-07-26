@@ -460,7 +460,7 @@ function showStackNoblesPopup(btn, aIdx, targetCoord) {
     if (!candidates.length) { alert('Brak wiosek ze szlachcicami w wojskach.'); return; }
 
     const a       = _currentAssignments[aIdx];
-    const needed  = a.nobles.length;
+    const needed  = a.nobles_needed || a.nobles.length;
     // Highlight coords already in this assignment
     const inAssignment = new Set(a.nobles);
 
@@ -510,7 +510,7 @@ function showStackNoblesPopup(btn, aIdx, targetCoord) {
 
 function stackNoblesTo(aIdx, chosenCoord, targetCoord) {
     const a          = _currentAssignments[aIdx];
-    const count      = a.nobles.length;
+    const count      = a.nobles_needed || a.nobles.length;  // fill ALL needed slots, not just assigned
     const nobleSpeed = parseFloat(_settings.noble_speed || 35);
     const [tx, ty]   = targetCoord.split('|').map(Number);
     const [vx, vy]   = chosenCoord.split('|').map(Number);
