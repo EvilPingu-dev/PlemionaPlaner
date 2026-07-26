@@ -5,8 +5,39 @@ let _currentAssignments = [];
 let _planEditMode       = false;
 let _blacklist          = {}; // { targetCoord: { offs: Set, nobles: Set } }
 let _candidatesPopup    = null;
-let _stackPopup         = null;
+let _stackModalAIdx     = null;  // which assignment the modal is targeting
 let _dragSrc            = null; // { aIdx, key, cidx } while dragging
+
+// ── Stack nobles modal: make it draggable ────────────────────────────────
+(function _initStackModal() {
+    document.addEventListener('DOMContentLoaded', () => {
+        const modal  = document.getElementById('stack-nobles-modal');
+        const header = document.getElementById('stack-modal-header');
+        const closeBtn = document.getElementById('stack-modal-close');
+        if (!modal || !header) return;
+
+        closeBtn.addEventListener('click', () => modal.classList.remove('open'));
+
+        let ox = 0, oy = 0, mx = 0, my = 0;
+        header.addEventListener('mousedown', e => {
+            e.preventDefault();
+            ox = modal.offsetLeft - e.clientX;
+            oy = modal.offsetTop  - e.clientY;
+            const onMove = ev => {
+                const x = Math.max(0, Math.min(window.innerWidth  - modal.offsetWidth,  ev.clientX + ox));
+                const y = Math.max(0, Math.min(window.innerHeight - modal.offsetHeight, ev.clientY + oy));
+                modal.style.left = x + 'px';
+                modal.style.top  = y + 'px';
+            };
+            const onUp = () => {
+                document.removeEventListener('mousemove', onMove);
+                document.removeEventListener('mouseup',  onUp);
+            };
+            document.addEventListener('mousemove', onMove);
+            document.addEventListener('mouseup',   onUp);
+        });
+    });
+})();
 
 async function runPlan() {
     const status = document.getElementById('plan-status');
@@ -442,10 +473,18 @@ async function showCandidates(btn, aIdx, key, oldCoord, targetCoord) {
 }
 
 function showStackNoblesPopup(btn, aIdx, targetCoord) {
-    if (_stackPopup) { _stackPopup.remove(); _stackPopup = null; }
+    const modal  = document.getElementById('stack-nobles-modal');
+    const title  = document.getElementById('stack-modal-title');
+    const list   = document.getElementById('stack-modal-list');
+    if (!modal) return;
+
+    _stackModalAIdx = aIdx;
 
     const nobleSpeed = parseFloat(_settings.noble_speed || 35);
     const [tx, ty]   = targetCoord.split('|').map(Number);
+    const a          = _currentAssignments[aIdx];
+    const needed     = a.nobles_needed || a.nobles.length;
+    const inAssignment = new Set(a.nobles);
 
     // All villages with nobles, sorted by distance
     const candidates = (_lastTroops || [])
@@ -457,55 +496,37 @@ function showStackNoblesPopup(btn, aIdx, targetCoord) {
         })
         .sort((a, b) => a.dist - b.dist);
 
-    if (!candidates.length) { alert('Brak wiosek ze szlachcicami w wojskach.'); return; }
+    title.textContent = `Stack ${needed}× szlachcic → ${targetCoord}`;
 
-    const a       = _currentAssignments[aIdx];
-    const needed  = a.nobles_needed || a.nobles.length;
-    // Highlight coords already in this assignment
-    const inAssignment = new Set(a.nobles);
-
-    const popup = document.createElement('div');
-    popup.id = 'stack-nobles-popup';
-    popup.className = 'candidates-popup';
-    popup.innerHTML =
-        `<div class="cand-header">Stack ${needed}× szlachcic → wybierz wioskę</div>` +
-        candidates.map(c => {
+    list.innerHTML = candidates.length
+        ? candidates.map(c => {
             const player  = _playerByCoord[c.coord] || '';
             const enough  = c.nobles >= needed;
             const current = inAssignment.has(c.coord);
             const warn    = !enough ? ` <span style="color:#e08060" title="Za mało szlachciców (${c.nobles})">⚠${c.nobles}</span>` : '';
-            return `<div class="cand-item stack-noble-item${current ? ' cand-night' : ''}" data-coord="${c.coord}">
+            return `<div class="cand-item stack-noble-item${current ? ' cand-night' : ''}" data-coord="${c.coord}" data-aidx="${aIdx}" data-target="${targetCoord}">
                 <span class="cand-coord">${c.coord}</span>
                 ${player ? `<span class="cand-player">${player}</span>` : ''}
                 <span class="cand-meta">${c.dist} pol · ${fmtMinutes(c.travelMin)}</span>
                 <span class="cand-off">Szl: ${c.nobles}${warn}</span>
             </div>`;
-        }).join('');
+        }).join('')
+        : '<div class="cand-loading" style="color:#c06060">Brak wiosek ze szlachcicami.</div>';
 
-    const rect = btn.getBoundingClientRect();
-    popup.style.position = 'fixed';
-    popup.style.top  = `${rect.bottom + 4}px`;
-    popup.style.left = `${Math.min(rect.left, window.innerWidth - 320)}px`;
-    popup.style.zIndex = '1000';
-    document.body.appendChild(popup);
-    _stackPopup = popup;
-
-    popup.querySelectorAll('.stack-noble-item').forEach(item => {
+    list.querySelectorAll('.stack-noble-item').forEach(item => {
         item.addEventListener('click', () => {
-            stackNoblesTo(aIdx, item.dataset.coord, targetCoord);
-            popup.remove();
-            _stackPopup = null;
+            stackNoblesTo(parseInt(item.dataset.aidx), item.dataset.coord, item.dataset.target);
+            modal.classList.remove('open');
         });
     });
 
-    const close = e => {
-        if (_stackPopup && !_stackPopup.contains(e.target) && !e.target.classList.contains('stack-nobles-btn')) {
-            _stackPopup.remove();
-            _stackPopup = null;
-            document.removeEventListener('click', close);
-        }
-    };
-    setTimeout(() => document.addEventListener('click', close), 0);
+    // Position near button if modal hasn't been manually moved yet
+    if (!modal.style.left) {
+        const rect = btn.getBoundingClientRect();
+        modal.style.top  = Math.min(rect.bottom + 6, window.innerHeight - 200) + 'px';
+        modal.style.left = Math.min(rect.left, window.innerWidth - 340) + 'px';
+    }
+    modal.classList.add('open');
 }
 
 function stackNoblesTo(aIdx, chosenCoord, targetCoord) {

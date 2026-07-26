@@ -291,6 +291,44 @@
     position: absolute;
     z-index: 9000;
 }
+
+/* ── Stack nobles draggable modal ───────────────────────────────────────── */
+#stack-nobles-modal {
+    background: #0d1a2e;
+    border: 1px solid #2a4a7a;
+    border-radius: 8px;
+    box-shadow: 0 6px 28px rgba(0,0,0,.8);
+    display: none;
+    min-width: 320px;
+    max-height: 480px;
+    position: fixed;
+    z-index: 9100;
+    user-select: none;
+    overflow: hidden;
+    flex-direction: column;
+}
+#stack-nobles-modal.open { display: flex; }
+#stack-modal-header {
+    align-items: center;
+    background: #0a1525;
+    border-bottom: 1px solid #1a3a6a;
+    cursor: grab;
+    display: flex;
+    gap: 8px;
+    justify-content: space-between;
+    padding: 8px 12px;
+}
+#stack-modal-header:active { cursor: grabbing; }
+#stack-modal-title { color: #c0d8ff; font-size: .82rem; font-weight: 600; }
+#stack-modal-close {
+    background: none; border: none; color: #7090b0;
+    cursor: pointer; font-size: 1rem; line-height: 1; padding: 0 2px;
+}
+#stack-modal-close:hover { color: #c06060; }
+#stack-modal-list {
+    overflow-y: auto;
+    flex: 1;
+}
 .cand-loading {
     color: #7a9ab0;
     font-size: .8rem;
