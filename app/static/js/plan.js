@@ -108,7 +108,9 @@ function _renderAssignments(assignments, editMode) {
 
         const offDtVal   = offArrivalStr   ? offArrivalStr.slice(0,19)   : '';
         const nobleGapMs = Math.round((_settings.off_noble_gap_minutes ?? 1) * 60000);
-        const nobleDtDisplay = offDtVal ? _fmtTimeMs(offDtVal) : '';
+        const nobleDtDisplay = (offDtVal && nobleGapMs > 0)
+            ? _fmtTimeMs(new Date(new Date(offDtVal).getTime() + nobleGapMs))
+            : (offDtVal ? _fmtTimeMs(offDtVal) : '');
         const gapLabel = `<span class="timing-noble-chip">⚔ szlachcice ${_fmtGap(nobleGapMs)} <span class="timing-noble-dt">${nobleDtDisplay}</span></span>`;
 
         return `

@@ -55,6 +55,24 @@ def plan_action(
     c2p  = coord_to_player or {}
     tom  = target_owner_map or {}
 
+    # Deduplicate targets: merge same-coord entries (sum offs/nobles, keep earliest slot).
+    # Duplicate coords cause two separate assignments with potentially inverted arrival times
+    # (e.g. nobles at slot-1 and offs at slot-2), making offs arrive *after* nobles.
+    _seen_target: dict[str, int] = {}
+    _deduped: list = []
+    for _t in targets:
+        _coord = _t["coord"]
+        if _coord in _seen_target:
+            _existing = _deduped[_seen_target[_coord]]
+            _existing["offs_needed"]   += _t.get("offs_needed",   0)
+            _existing["nobles_needed"] += _t.get("nobles_needed", 0)
+            if _t.get("arrival_slot", 1) < _existing.get("arrival_slot", 1):
+                _existing["arrival_slot"] = _t["arrival_slot"]
+        else:
+            _seen_target[_coord] = len(_deduped)
+            _deduped.append(dict(_t))
+    targets = _deduped
+
     conflict_map: dict[str, set[str]] = {}
     for pair in (conflicts or []):
         if len(pair) == 2:
