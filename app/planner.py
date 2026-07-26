@@ -10,6 +10,11 @@ def _dist(x1: int, y1: int, x2: int, y2: int) -> float:
     return math.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2)
 
 
+def _eff_off_speed(v: dict, off_speed: float, ram_speed: float) -> float:
+    """Return effective travel speed for an OFF village: ram_speed when it has rams."""
+    return ram_speed if v.get("rams", 0) > 0 else off_speed
+
+
 def is_night_send(dist: float, speed: float, arrival_dt: datetime | None) -> bool:
     """Return True if the send time for this village falls in the 23:30–07:30 window."""
     if arrival_dt is None or speed <= 0:
@@ -26,6 +31,7 @@ def plan_action(
     arrival_datetime: datetime | None = None,
     arrival_slots: dict | None = None,   # {slot_index: datetime}  1-based
     off_speed: float = 18.0,
+    ram_speed: float = 30.0,
     noble_speed: float = 35.0,
     conflicts: list | None = None,
     coord_to_player: dict | None = None,
@@ -145,7 +151,8 @@ def plan_action(
                           if _dist(v["x"], v["y"], tx, ty) >= min_off_dist]
         if block_night_sends:
             candidates = [v for v in candidates
-                          if not is_night_send(_dist(v["x"], v["y"], tx, ty), off_speed, t_arrival)]
+                          if not is_night_send(_dist(v["x"], v["y"], tx, ty),
+                                               _eff_off_speed(v, off_speed, ram_speed), t_arrival)]
 
         if off_sort == "farthest":
             candidates.sort(key=lambda v: -_dist(v["x"], v["y"], tx, ty))
@@ -153,7 +160,8 @@ def plan_action(
             candidates.sort(key=lambda v: -v["off"])
         else:  # "closest" — prefer non-night first, then distance
             candidates.sort(key=lambda v: (
-                int(is_night_send(_dist(v["x"], v["y"], tx, ty), off_speed, t_arrival)),
+                int(is_night_send(_dist(v["x"], v["y"], tx, ty),
+                                  _eff_off_speed(v, off_speed, ram_speed), t_arrival)),
                 _dist(v["x"], v["y"], tx, ty),
             ))
         if off_sort_invert:
@@ -216,7 +224,9 @@ def plan_action(
             {
                 "coord":    v["coord"],
                 "dist":     round(_dist(v["x"], v["y"], tx, ty), 1),
-                "is_night": is_night_send(_dist(v["x"], v["y"], tx, ty), off_speed, t_arrival),
+                "speed":    _eff_off_speed(v, off_speed, ram_speed),
+                "is_night": is_night_send(_dist(v["x"], v["y"], tx, ty),
+                                          _eff_off_speed(v, off_speed, ram_speed), t_arrival),
             }
             for v in chosen_offs
         ]
@@ -262,12 +272,14 @@ def plan_action(
             for v in free:
                 if a["offs_missing"] <= 0:
                     break
-                if block_night_sends and is_night_send(_dist(v["x"], v["y"], tx, ty), off_speed, arrival_datetime):
+                eff_spd = _eff_off_speed(v, off_speed, ram_speed)
+                if block_night_sends and is_night_send(_dist(v["x"], v["y"], tx, ty), eff_spd, arrival_datetime):
                     continue
                 d = round(_dist(v["x"], v["y"], tx, ty), 1)
                 a["offs"].append(v["coord"])
                 a["offs_detail"].append({"coord": v["coord"], "dist": d,
-                                          "is_night": is_night_send(d, off_speed, arrival_datetime)})
+                                          "speed": eff_spd,
+                                          "is_night": is_night_send(d, eff_spd, arrival_datetime)})
                 a["offs_missing"] -= 1
                 used_off_coords.add(v["coord"])
 

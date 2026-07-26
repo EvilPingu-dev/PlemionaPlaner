@@ -85,7 +85,8 @@ function _renderAssignments(assignments, editMode) {
         const offMissing   = a.offs_missing   > 0 ? `<span class="missing">(brakuje ${a.offs_missing})</span>`   : '';
         const nobleMissing = a.nobles_missing > 0 ? `<span class="missing">(brakuje ${a.nobles_missing})</span>` : '';
 
-        const makeTag = (d, speed, cls, key, idx, arrStr) => {
+        const makeTag = (d, fallbackSpeed, cls, key, idx, arrStr) => {
+            const speed     = d.speed != null ? d.speed : fallbackSpeed;
             const travelMin = d.dist != null ? (d.dist * speed) : null;
             const sendStr   = (travelMin != null && arrStr) ? ` → ${calcSendStr(arrStr, travelMin)}` : '';
             const distStr   = d.dist != null ? ` <small class="dist-tag">${d.dist} pol, ${fmtMinutes(travelMin)}${sendStr}</small>` : '';

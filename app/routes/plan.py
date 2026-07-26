@@ -106,6 +106,7 @@ def run_plan():
         arrival_datetime=arrival_dt,
         arrival_slots=arrival_slots,
         off_speed=float(settings.get("off_speed", 18)),
+        ram_speed=float(settings.get("ram_speed", 30)),
         noble_speed=float(settings.get("noble_speed", 35)),
         conflicts=conflicts,
         coord_to_player=coord_to_player,
@@ -177,8 +178,8 @@ def reload_coord():
 
     tx, ty      = target_data["x"], target_data["y"]
     off_speed   = float(settings.get("off_speed",   18))
+    ram_speed   = float(settings.get("ram_speed",   30))
     noble_speed = float(settings.get("noble_speed", 35))
-    speed       = off_speed if coord_type == "offs" else noble_speed
 
     arrival_raw = settings.get("arrival_datetime", "")
     arrival_dt: datetime | None = None
@@ -198,12 +199,20 @@ def reload_coord():
 
     def _sort_key(v):
         d = _dist(v["x"], v["y"], tx, ty)
-        return (int(is_night_send(d, speed, arrival_dt)), d)
+        if coord_type == "offs":
+            spd = ram_speed if v.get("rams", 0) > 0 else off_speed
+        else:
+            spd = noble_speed
+        return (int(is_night_send(d, spd, arrival_dt)), d)
 
     candidates.sort(key=_sort_key)
     new_v  = candidates[0]
     dist   = round(_dist(new_v["x"], new_v["y"], tx, ty), 1)
-    is_ngt = is_night_send(dist, speed, arrival_dt)
+    if coord_type == "offs":
+        eff_spd = ram_speed if new_v.get("rams", 0) > 0 else off_speed
+    else:
+        eff_spd = noble_speed
+    is_ngt = is_night_send(dist, eff_spd, arrival_dt)
 
     a = assignments[a_idx]
     for lst_key, detail_key in ((coord_type, coord_type + "_detail"),):
@@ -213,7 +222,10 @@ def reload_coord():
             idx = lst.index(old_coord)
             lst[idx] = new_v["coord"]
             if idx < len(detail):
-                detail[idx] = {"coord": new_v["coord"], "dist": dist, "is_night": is_ngt}
+                new_detail = {"coord": new_v["coord"], "dist": dist, "is_night": is_ngt}
+                if coord_type == "offs":
+                    new_detail["speed"] = eff_spd
+                detail[idx] = new_detail
         except ValueError:
             pass
 

@@ -14,6 +14,7 @@ function applySettings(s) {
     document.getElementById('s-server').value          = s.server       || '';
     document.getElementById('s-leader').value          = s.leader_name  || '';
     document.getElementById('s-off-speed').value       = s.off_speed    ?? 18;
+    document.getElementById('s-ram-speed').value       = s.ram_speed    ?? 30;
     document.getElementById('s-noble-speed').value     = s.noble_speed  ?? 35;
     _gapMinutesToFields('s', s.off_noble_gap_minutes ?? 1);
     document.getElementById('s-greeting').value        = s.greeting     || '';
@@ -84,6 +85,7 @@ async function saveSettings() {
         server:                 document.getElementById('s-server').value,
         leader_name:            document.getElementById('s-leader').value,
         off_speed:              parseFloat(document.getElementById('s-off-speed').value),
+        ram_speed:              parseFloat(document.getElementById('s-ram-speed').value),
         noble_speed:            parseFloat(document.getElementById('s-noble-speed').value),
         off_noble_gap_minutes:  _gapFieldsToMs('s') / 60000,
         greeting:               document.getElementById('s-greeting').value,
