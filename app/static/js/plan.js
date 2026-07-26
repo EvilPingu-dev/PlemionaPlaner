@@ -157,6 +157,11 @@ function _renderAssignments(assignments, editMode) {
             ? _fmtTimeMs(new Date(new Date(offDtVal).getTime() + nobleGapMs))
             : (offDtVal ? _fmtTimeMs(offDtVal) : '');
         const gapLabel = `<span class="timing-noble-chip">⚔ szlachcice ${_fmtGap(nobleGapMs)} <span class="timing-noble-dt">${nobleDtDisplay}</span></span>`;
+        const slotBtns = (_settings.arrival_slots || []).map((slot, si) => {
+            const label = slot.label || `Fala ${si + 1}`;
+            const dtStr = slot.datetime ? slot.datetime.slice(11, 16) : '??:??';
+            return `<button class="btn btn-sm slot-apply-single" data-aidx="${aIdx}" data-dt="${_esc(slot.datetime || '')}">${label}: ${dtStr}</button>`;
+        }).join('');
 
         return `
         <div class="assign-block">
@@ -182,6 +187,7 @@ function _renderAssignments(assignments, editMode) {
                 <span class="timing-label-sm">Wejście OFF:</span>
                 <input type="datetime-local" class="asgn-off-dt" step="1" data-aidx="${aIdx}" value="${_esc(offDtVal)}">
                 ${gapLabel}
+                ${slotBtns ? `<span class="timing-slot-inline">${slotBtns}</span>` : ''}
             </div>
         </div>`;
     }).join('');
@@ -271,6 +277,32 @@ function _renderAssignments(assignments, editMode) {
             _dragSrc = null;
             _renderAssignments(_currentAssignments, _planEditMode);
             _saveCurrentPlan();
+        });
+    });
+
+    // ── Per-assignment Fala slot buttons ────────────────────────────────────
+    document.querySelectorAll('.slot-apply-single').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const aIdx = parseInt(btn.dataset.aidx);
+            const inp  = document.querySelector(`.asgn-off-dt[data-aidx="${aIdx}"]`);
+            if (inp) {
+                inp.value = btn.dataset.dt.slice(0, 19);
+                inp.dispatchEvent(new Event('change'));
+            }
+            _updateNobleChips();
+        });
+    });
+
+    // ── Per-assignment Fala slot buttons ──────────────────────────────────
+    document.querySelectorAll('.slot-apply-single').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const aIdx = parseInt(btn.dataset.aidx);
+            const inp  = document.querySelector(`.asgn-off-dt[data-aidx="${aIdx}"]`);
+            if (inp) {
+                inp.value = btn.dataset.dt.slice(0, 19);
+                inp.dispatchEvent(new Event('change'));
+            }
+            _updateNobleChips();
         });
     });
 

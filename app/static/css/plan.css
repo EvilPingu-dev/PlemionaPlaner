@@ -177,6 +177,27 @@
     gap: 6px;
     flex-wrap: wrap;
 }
+.timing-slot-inline {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    margin-left: 6px;
+}
+.slot-apply-single {
+    background: #0e2040;
+    border: 1px solid #2a5080;
+    border-radius: 4px;
+    color: #9ac0e8;
+    cursor: pointer;
+    font-size: .76rem;
+    padding: 2px 8px;
+    white-space: nowrap;
+}
+.slot-apply-single:hover {
+    background: #1a3a70;
+    border-color: #4a80c0;
+    color: #c8e4ff;
+}
 .slot-apply-btn {
     background: var(--blue);
     border: 1px solid #2a6aaa;
