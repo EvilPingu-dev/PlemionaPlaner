@@ -119,6 +119,12 @@
 
 .tw-link:hover { background: #2a4a0a; color: #c0f080; }
 
+/* Foreign (other players') attack rows */
+tr.attack-foreign td { color: #666; font-size: .8rem; }
+tr.attack-foreign code { color: #555; }
+tr.attack-foreign strong { font-weight: normal; color: #666; }
+.foreign-player { color: #7a9ab0; font-size: .78rem; }
+
 .btn-mail {
     background: #0a1a2a;
     border: 1px solid #1e3a5f;

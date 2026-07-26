@@ -75,6 +75,7 @@ function renderMessages(messages) {
 
     container.innerHTML = messages.map((m, idx) => {
         const attackRows = m.attacks.map(a => {
+            const isForeign = !!a.is_foreign;
             const sendDt  = new Date(a.send_dt);
             const diffMs  = sendDt.getTime() - now;
             const diffMin = diffMs / 60000;
@@ -95,10 +96,15 @@ function renderMessages(messages) {
                 cdText = `za ${Math.floor(diffMin/60)}h ${Math.round(diffMin%60)}min`;
             }
             const countdown = `<span class="send-countdown ${cdClass}">${cdText}</span>`;
-            const attackBtn = (a.from_id && a.target_id && _settings.server)
-                ? `<a class="tw-link" href="https://pl${_settings.server}.plemiona.pl/game.php?village=${a.from_id}&screen=place&target=${a.target_id}" target="_blank" rel="noopener">⚔ Wyślij</a>`
-                : `<span class="dim">${a.type}</span>`;
-            return `<tr>
+            let attackBtn;
+            if (isForeign) {
+                attackBtn = `<span class="dim foreign-player">👤 ${a.player || ''}</span>`;
+            } else {
+                attackBtn = (a.from_id && a.target_id && _settings.server)
+                    ? `<a class="tw-link" href="https://pl${_settings.server}.plemiona.pl/game.php?village=${a.from_id}&screen=place&target=${a.target_id}" target="_blank" rel="noopener">⚔ Wyślij</a>`
+                    : `<span class="dim">${a.type}</span>`;
+            }
+            return `<tr class="${isForeign ? 'attack-foreign' : ''}">
                 <td>${attackBtn}</td>
                 <td><strong>${a.type}</strong></td>
                 <td><code>${a.from_coord}</code></td>
@@ -111,6 +117,7 @@ function renderMessages(messages) {
                 <td>${a.burzenie || '-'}</td>
             </tr>`;
         }).join('');
+        const ownCount = m.attacks.filter(a => !a.is_foreign).length;
 
         const mailBtn = m.mail_link
             ? `<button class="btn btn-mail" data-idx="${idx}" data-link="${escAttr(m.mail_link)}">✉ Wyślij w TW</button>`
@@ -119,7 +126,7 @@ function renderMessages(messages) {
         return `<div class="card msg-card">
             <div class="msg-header">
                 <span class="msg-player">👤 ${m.player}</span>
-                <span class="msg-count">${m.attacks.length} wysyłek</span>
+                <span class="msg-count">${ownCount} wysyłek</span>
                 ${mailBtn}
                 <button class="btn btn-copy" data-idx="${idx}" title="Kopiuj BBCode">📋 Kopiuj BBCode</button>
             </div>

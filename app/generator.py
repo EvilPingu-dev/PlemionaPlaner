@@ -187,6 +187,7 @@ def generate_messages(
                 "attack_link":  link,
                 "from_id":      from_id,
                 "target_id":    _t_id,
+                "player":       player,
             }
             player_attacks.setdefault(player, []).append(attack)
 
@@ -290,22 +291,59 @@ def generate_messages(
     messages = []
     subject = f"Cele {action_name} {arrival_dt_fmt}"
 
-    for player, attacks in sorted(player_attacks.items()):
-        attacks.sort(key=lambda a: a["send_dt"])
+    # Build lookup: all attacks on each target (across all players)
+    all_by_target: dict[str, list] = {}
+    for pl_atks in player_attacks.values():
+        for a in pl_atks:
+            all_by_target.setdefault(a["target_coord"], []).append(a)
 
-        rows = []
-        for i, a in enumerate(attacks, 1):
-            rows.append(
-                f"[*]{i}"
-                f"[|]{a['attack_link']}"
-                f"[|]{a['off']}"
-                f"[|]{a['nobles']}"
-                f"[|]{a['burzenie']}"
-                f"[|]{a['send_str']}"
-                f"[|]{a['arrival_str']}"
-                f"[|][coord]{a['from_coord']}[/coord]"
-                f"[|][coord]{a['target_coord']}[/coord]"
-            )
+    for player, attacks in sorted(player_attacks.items()):
+        # Group own attacks by target, ordered by earliest send
+        own_by_target: dict[str, list] = {}
+        for a in attacks:
+            own_by_target.setdefault(a["target_coord"], []).append(a)
+
+        rows: list[str] = []
+        ui_attacks: list[dict] = []   # own + foreign, used by frontend table
+        row_i = 1
+
+        for tcoord in sorted(own_by_target,
+                             key=lambda t: min(a["send_dt"] for a in own_by_target[t])):
+            # Own attacks on this target (sorted by send time)
+            for a in sorted(own_by_target[tcoord], key=lambda x: x["send_dt"]):
+                rows.append(
+                    f"[*]{row_i}"
+                    f"[|]{a['attack_link']}"
+                    f"[|]{a['off']}"
+                    f"[|]{a['nobles']}"
+                    f"[|]{a['burzenie']}"
+                    f"[|]{a['send_str']}"
+                    f"[|]{a['arrival_str']}"
+                    f"[|][coord]{a['from_coord']}[/coord]"
+                    f"[|][coord]{a['target_coord']}[/coord]"
+                )
+                ui_attacks.append(a)
+                row_i += 1
+
+            # Other players' attacks on the same target (informational)
+            for a in sorted(all_by_target.get(tcoord, []), key=lambda x: x["send_dt"]):
+                if a["player"] == player:
+                    continue
+                other = a["player"]
+                dim = "#888888"
+                rows.append(
+                    f"[*]{row_i}"
+                    f"[|][color={dim}][player]{other}[/player][/color]"
+                    f"[|][color={dim}]{a['off']}[/color]"
+                    f"[|][color={dim}]{a['nobles']}[/color]"
+                    f"[|][color={dim}]-[/color]"
+                    f"[|][color={dim}]{a['send_str']}[/color]"
+                    f"[|][color={dim}]{a['arrival_str']}[/color]"
+                    f"[|][color={dim}][coord]{a['from_coord']}[/coord][/color]"
+                    f"[|][color={dim}][coord]{a['target_coord']}[/coord][/color]"
+                )
+                ui_attacks.append({**a, "is_foreign": True})
+                row_i += 1
 
         header = (
             "[table][**]"
@@ -327,7 +365,7 @@ def generate_messages(
             "player":    player,
             "message":   msg,
             "mail_link": mail_url,
-            "attacks":   attacks,
+            "attacks":   ui_attacks,
         })
 
     return messages
