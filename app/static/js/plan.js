@@ -5,6 +5,7 @@ let _currentAssignments = [];
 let _planEditMode       = false;
 let _blacklist          = {}; // { targetCoord: { offs: Set, nobles: Set } }
 let _candidatesPopup    = null;
+let _stackPopup         = null;
 let _dragSrc            = null; // { aIdx, key, cidx } while dragging
 
 async function runPlan() {
@@ -139,7 +140,9 @@ function _renderAssignments(assignments, editMode) {
                     ${addOffInput}
                 </div>
                 <div class="assign-group">
-                    <label>Szlachcice ${nobleMissing}</label>
+                    <label>Szlachcice ${nobleMissing}
+                        ${a.nobles.length > 1 ? `<button class="btn btn-sm stack-nobles-btn" data-aidx="${aIdx}" data-target="${a.target}" title="Wyślij wszystkie szlachcice z jednej wioski">⊞ Stack</button>` : ''}
+                    </label>
                     <div class="coord-list">${nobleTags || '<span class="missing">brak</span>'}</div>
                     ${addNobleInput}
                 </div>
@@ -237,6 +240,14 @@ function _renderAssignments(assignments, editMode) {
             _dragSrc = null;
             _renderAssignments(_currentAssignments, _planEditMode);
             _saveCurrentPlan();
+        });
+    });
+
+    // ── Stack nobles popup ─────────────────────────────────────────────────
+    document.querySelectorAll('.stack-nobles-btn').forEach(btn => {
+        btn.addEventListener('click', e => {
+            e.stopPropagation();
+            showStackNoblesPopup(btn, parseInt(btn.dataset.aidx), btn.dataset.target);
         });
     });
 
@@ -428,6 +439,97 @@ async function showCandidates(btn, aIdx, key, oldCoord, targetCoord) {
     } catch {
         popup.innerHTML = '<div class="cand-loading" style="color:#c06060">Błąd połączenia.</div>';
     }
+}
+
+function showStackNoblesPopup(btn, aIdx, targetCoord) {
+    if (_stackPopup) { _stackPopup.remove(); _stackPopup = null; }
+
+    const nobleSpeed = parseFloat(_settings.noble_speed || 35);
+    const [tx, ty]   = targetCoord.split('|').map(Number);
+
+    // All villages with nobles, sorted by distance
+    const candidates = (_lastTroops || [])
+        .filter(v => v.nobles > 0)
+        .map(v => {
+            const [vx, vy] = v.coord.split('|').map(Number);
+            const dist = Math.round(Math.sqrt((vx - tx) ** 2 + (vy - ty) ** 2) * 10) / 10;
+            return { coord: v.coord, nobles: v.nobles, dist, travelMin: Math.round(dist * nobleSpeed) };
+        })
+        .sort((a, b) => a.dist - b.dist);
+
+    if (!candidates.length) { alert('Brak wiosek ze szlachcicami w wojskach.'); return; }
+
+    const a       = _currentAssignments[aIdx];
+    const needed  = a.nobles.length;
+    // Highlight coords already in this assignment
+    const inAssignment = new Set(a.nobles);
+
+    const popup = document.createElement('div');
+    popup.id = 'stack-nobles-popup';
+    popup.className = 'candidates-popup';
+    popup.innerHTML =
+        `<div class="cand-header">Stack ${needed}× szlachcic → wybierz wioskę</div>` +
+        candidates.map(c => {
+            const player  = _playerByCoord[c.coord] || '';
+            const enough  = c.nobles >= needed;
+            const current = inAssignment.has(c.coord);
+            const warn    = !enough ? ` <span style="color:#e08060" title="Za mało szlachciców (${c.nobles})">⚠${c.nobles}</span>` : '';
+            return `<div class="cand-item stack-noble-item${current ? ' cand-night' : ''}" data-coord="${c.coord}">
+                <span class="cand-coord">${c.coord}</span>
+                ${player ? `<span class="cand-player">${player}</span>` : ''}
+                <span class="cand-meta">${c.dist} pol · ${fmtMinutes(c.travelMin)}</span>
+                <span class="cand-off">Szl: ${c.nobles}${warn}</span>
+            </div>`;
+        }).join('');
+
+    const rect = btn.getBoundingClientRect();
+    popup.style.position = 'fixed';
+    popup.style.top  = `${rect.bottom + 4}px`;
+    popup.style.left = `${Math.min(rect.left, window.innerWidth - 320)}px`;
+    popup.style.zIndex = '1000';
+    document.body.appendChild(popup);
+    _stackPopup = popup;
+
+    popup.querySelectorAll('.stack-noble-item').forEach(item => {
+        item.addEventListener('click', () => {
+            stackNoblesTo(aIdx, item.dataset.coord, targetCoord);
+            popup.remove();
+            _stackPopup = null;
+        });
+    });
+
+    const close = e => {
+        if (_stackPopup && !_stackPopup.contains(e.target) && !e.target.classList.contains('stack-nobles-btn')) {
+            _stackPopup.remove();
+            _stackPopup = null;
+            document.removeEventListener('click', close);
+        }
+    };
+    setTimeout(() => document.addEventListener('click', close), 0);
+}
+
+function stackNoblesTo(aIdx, chosenCoord, targetCoord) {
+    const a          = _currentAssignments[aIdx];
+    const count      = a.nobles.length;
+    const nobleSpeed = parseFloat(_settings.noble_speed || 35);
+    const [tx, ty]   = targetCoord.split('|').map(Number);
+    const [vx, vy]   = chosenCoord.split('|').map(Number);
+    const dist       = Math.round(Math.sqrt((vx - tx) ** 2 + (vy - ty) ** 2) * 10) / 10;
+
+    // Preserve is_conqueror on first noble if it was set anywhere
+    const oldDetail  = a.nobles_detail || [];
+    const hadConq    = oldDetail.some(d => d.is_conqueror);
+
+    a.nobles         = Array(count).fill(chosenCoord);
+    a.nobles_detail  = Array.from({ length: count }, (_, i) => ({
+        coord: chosenCoord,
+        dist,
+        is_conqueror: i === 0 && hadConq,
+    }));
+    a.nobles_missing = Math.max(0, (a.nobles_needed || 0) - count);
+
+    _renderAssignments(_currentAssignments, _planEditMode);
+    _saveCurrentPlan();
 }
 
 async function swapCoord(aIdx, key, oldCoord, newCoord, targetCoord) {
