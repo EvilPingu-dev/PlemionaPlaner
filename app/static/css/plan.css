@@ -304,6 +304,10 @@
     background:   #0a1830;
 }
 
+.coord-tag[draggable] { cursor: grab; }
+.coord-tag.dragging   { opacity: .35; cursor: grabbing; }
+.coord-tag.drag-over  { border-color: #4a8aca; box-shadow: -3px 0 0 #4a8aca; }
+
 .night-mark {
     font-size: .75rem;
     margin-left: 3px;

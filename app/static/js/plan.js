@@ -5,6 +5,7 @@ let _currentAssignments = [];
 let _planEditMode       = false;
 let _blacklist          = {}; // { targetCoord: { offs: Set, nobles: Set } }
 let _candidatesPopup    = null;
+let _dragSrc            = null; // { aIdx, key, cidx } while dragging
 
 async function runPlan() {
     const status = document.getElementById('plan-status');
@@ -100,7 +101,7 @@ function _renderAssignments(assignments, editMode) {
                 : '';
             const reloadBtn = `<button class="reload-coord" data-aidx="${aIdx}" data-key="${key}" data-cidx="${idx}" data-coord="${d.coord}" data-target="${a.target}" title="Zamień na następną najlepszą wioskę">↻</button>`;
             const pickBtn  = `<button class="pick-coord"   data-aidx="${aIdx}" data-key="${key}" data-cidx="${idx}" data-coord="${d.coord}" data-target="${a.target}" title="Wybierz z listy">▾</button>`;
-            return `<span class="coord-tag ${cls}${isNight ? ' night-send' : ''}">${removeBtn}${reloadBtn}${pickBtn}${playerSpan}${d.coord}${distStr}${nightMark}</span>`;
+            return `<span class="coord-tag ${cls}${isNight ? ' night-send' : ''}" draggable="true" data-aidx="${aIdx}" data-key="${key}" data-cidx="${idx}">${removeBtn}${reloadBtn}${pickBtn}${playerSpan}${d.coord}${distStr}${nightMark}</span>`;
         };
 
         const offTags   = (a.offs_detail   || a.offs.map(c   => ({coord: c, dist: null}))).map((d, i) => makeTag(d, offSpeed,   '',          'offs',   i, offArrivalStr)).join('');
@@ -183,6 +184,59 @@ function _renderAssignments(assignments, editMode) {
             });
         });
     }
+
+    // ── Drag-and-drop reordering (always active) ──────────────────────────
+    document.querySelectorAll('.coord-tag[draggable]').forEach(tag => {
+        tag.addEventListener('dragstart', e => {
+            _dragSrc = { aIdx: parseInt(tag.dataset.aidx), key: tag.dataset.key, cidx: parseInt(tag.dataset.cidx) };
+            tag.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', tag.dataset.cidx);
+        });
+        tag.addEventListener('dragend', () => {
+            tag.classList.remove('dragging');
+            document.querySelectorAll('.coord-tag.drag-over').forEach(el => el.classList.remove('drag-over'));
+            _dragSrc = null;
+        });
+        tag.addEventListener('dragover', e => {
+            if (!_dragSrc) return;
+            const sameList = parseInt(tag.dataset.aidx) === _dragSrc.aIdx && tag.dataset.key === _dragSrc.key;
+            if (!sameList) return;
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            document.querySelectorAll('.coord-tag.drag-over').forEach(el => el.classList.remove('drag-over'));
+            if (parseInt(tag.dataset.cidx) !== _dragSrc.cidx) tag.classList.add('drag-over');
+        });
+        tag.addEventListener('dragleave', () => tag.classList.remove('drag-over'));
+        tag.addEventListener('drop', e => {
+            e.preventDefault();
+            tag.classList.remove('drag-over');
+            if (!_dragSrc) return;
+            const toAIdx = parseInt(tag.dataset.aidx);
+            const toKey  = tag.dataset.key;
+            const toCidx = parseInt(tag.dataset.cidx);
+            if (toAIdx !== _dragSrc.aIdx || toKey !== _dragSrc.key || toCidx === _dragSrc.cidx) return;
+            const a      = _currentAssignments[_dragSrc.aIdx];
+            const list   = a[_dragSrc.key];
+            const detail = a[_dragSrc.key + '_detail'];
+            const [movedCoord] = list.splice(_dragSrc.cidx, 1);
+            list.splice(toCidx, 0, movedCoord);
+            if (detail && detail.length) {
+                const [movedDetail] = detail.splice(_dragSrc.cidx, 1);
+                detail.splice(toCidx, 0, movedDetail);
+            }
+            _dragSrc = null;
+            _renderAssignments(_currentAssignments, _planEditMode);
+            _saveCurrentPlan();
+        });
+    });
+}
+
+function _saveCurrentPlan() {
+    return fetch('/api/plan/override', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ assignments: _currentAssignments }),
+    });
 }
 
 function _renderBurstAssignments(burstAssignments) {
