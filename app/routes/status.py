@@ -4,6 +4,7 @@ from flask import Blueprint, jsonify, request
 from ..planner import _dist
 from ..storage import (
     ATTACK_STATUS_FILE,
+    CANCELLED_TARGETS_FILE,
     EXCLUDED_REPLACEMENTS_FILE,
     PLAN_FILE,
     PLAYER_MAP_FILE,
@@ -46,6 +47,77 @@ def set_attack_status():
 def reset_attack_status():
     save_json(ATTACK_STATUS_FILE, {})
     return jsonify({"ok": True})
+
+
+# ── Cancelled targets ─────────────────────────────────────────────────────────
+
+@bp.get("/api/cancelled-targets")
+def get_cancelled_targets():
+    data = load_json(CANCELLED_TARGETS_FILE)
+    return jsonify(data if isinstance(data, list) else [])
+
+
+@bp.post("/api/cancelled-targets/toggle")
+def toggle_cancelled_target():
+    coord = (request.json or {}).get("coord", "").strip()
+    if not coord:
+        return jsonify({"error": "Brak koordynatu."}), 400
+    data = load_json(CANCELLED_TARGETS_FILE)
+    cancelled = set(data) if isinstance(data, list) else set()
+    if coord in cancelled:
+        cancelled.discard(coord)
+    else:
+        cancelled.add(coord)
+    result = sorted(cancelled)
+    save_json(CANCELLED_TARGETS_FILE, result)
+    return jsonify({"cancelled": result})
+
+
+@bp.post("/api/cancelled-targets/message")
+def cancelled_targets_message():
+    """Generate a BBCode message informing players that certain targets are cancelled."""
+    body        = request.get_json(silent=True) or {}
+    cancelled   = set(body.get("cancelled", []))
+    assignments = body.get("assignments", []) or load_json(PLAN_FILE).get("assignments", [])
+    settings    = load_settings()
+    player_map  = load_json(PLAYER_MAP_FILE)
+
+    action_name = settings.get("action_name", "Akcja")
+
+    player_by_coord: dict[str, str] = {}
+    for pm in player_map:
+        for coord in pm.get("villages", []):
+            player_by_coord[coord.strip()] = pm["player"]
+
+    # Build: cancelled_coord → set of unique players assigned there
+    target_players: dict[str, set] = {}
+    for asgn in assignments:
+        tcoord = asgn.get("target", "")
+        if tcoord not in cancelled:
+            continue
+        players: set[str] = set()
+        for coord in asgn.get("offs", []) + asgn.get("nobles", []):
+            p = player_by_coord.get(coord)
+            if p:
+                players.add(p)
+        target_players[tcoord] = players
+
+    if not target_players:
+        return jsonify({"bbcode": "", "message": "Brak odwołanych celów lub brak przypisanych ataków."})
+
+    lines = [
+        f"[b]Akcja: {action_name} – ODWOŁANE CELE[/b]",
+        "[b]Poniższe cele zostały odwołane. Nie wysyłaj ataków na te wioski![/b]",
+        "",
+    ]
+    for tcoord, players in sorted(target_players.items()):
+        player_list = ", ".join(f"[player]{p}[/player]" for p in sorted(players)) or "–"
+        lines.append(f"[b]Cel: [coord]{tcoord}[/coord][/b]")
+        lines.append(f"Gracze których dotyczy: {player_list}")
+        lines.append("[b]NIE wysyłajcie ataków na ten cel.[/b]")
+        lines.append("")
+
+    return jsonify({"bbcode": "\n".join(lines), "cancelled_count": len(target_players)})
 
 
 # ── Coverage post ─────────────────────────────────────────────────────────────

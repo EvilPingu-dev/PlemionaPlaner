@@ -6,6 +6,7 @@ let _statusMap    = {};   // { id: "sent"|"missed"|"unknown" }
 let _statusPlan   = [];   // current assignments snapshot
 let _statusPollId = null; // setInterval handle for live polling
 let _villageIds   = {};   // { coord: gameId }
+let _cancelledTargets = new Set(); // coords of cancelled targets
 
 const STATUS_POLL_MS = 30_000; // refresh every 30 s
 
@@ -68,6 +69,8 @@ async function loadAttackStatus() {
             fetch('/api/attack-status').then(r => r.json()),
             fetch('/api/village-ids').then(r => r.json()).catch(() => ({})),
         ]);
+        const cancelled = await fetch('/api/cancelled-targets').then(r => r.json()).catch(() => []);
+        _cancelledTargets = new Set(Array.isArray(cancelled) ? cancelled : []);
 
         // Use the already-computed plan from the Rozpiski tab if available,
         // otherwise fall back to the timeline endpoint which reconstructs it.
@@ -185,18 +188,21 @@ function _renderStatusList() {
         const missed  = rows.filter(r => r.st === 'missed').length;
         const unknown = rows.filter(r => r.st === 'unknown').length;
 
-        const summaryColor = missed > 0 ? '#e06060' : unknown > 0 ? '#e0a030' : '#4ec97a';
-        const summaryText  = missed > 0 ? `❌ ${missed} nie wysłano` : unknown > 0 ? `❓ ${unknown} nieznany` : '✅ Wszystko wysłane';
+        const cancelled = _cancelledTargets.has(tcoord);
+        const summaryColor = cancelled ? '#888' : missed > 0 ? '#e06060' : unknown > 0 ? '#e0a030' : '#4ec97a';
+        const summaryText  = cancelled ? '🚫 Odwołany' : missed > 0 ? `❌ ${missed} nie wysłano` : unknown > 0 ? `❓ ${unknown} nieznany` : '✅ Wszystko wysłane';
 
         const needRows = rows.filter(r => r.st !== 'sent');
         const sentRows = rows.filter(r => r.st === 'sent');
 
-        return `<div class="card status-player-card">
+        return `<div class="card status-player-card${cancelled ? ' target-cancelled' : ''}">
             <div class="status-player-header">
                 <span class="status-player-name">🎯 Cel: <strong><code>${escHtml(tcoord)}</code></strong></span>
                 <span class="status-player-summary" style="color:${summaryColor}">${summaryText}</span>
                 <span class="status-counts">${sent}/${total} wysłanych</span>
-                <button class="btn btn-sm" data-mark-all-target="${escHtml(tcoord)}" style="margin-left:auto">✅ Wszystkie wysłane</button>
+                <button class="btn btn-sm cancel-target-btn${cancelled ? ' btn-danger' : ''}" data-tcoord="${escHtml(tcoord)}" style="margin-left:auto"
+                    title="${cancelled ? 'Przywróć cel' : 'Odwołaj cel (gracze dostaną komunikat)'}">${cancelled ? '↩ Przywróć' : '🚫 Odwołaj'}</button>
+                <button class="btn btn-sm" data-mark-all-target="${escHtml(tcoord)}">✅ Wszystkie wysłane</button>
             </div>
             <div class="status-split">
                 <div>${makeSide(needRows, '❌❓ Brakujące / Nieznane', '#e06060')}</div>
@@ -208,6 +214,21 @@ function _renderStatusList() {
     // Wire status buttons
     container.querySelectorAll('.st-btn').forEach(btn => {
         btn.addEventListener('click', () => _setStatus(btn.dataset.sid, btn.dataset.st));
+    });
+
+    // Wire cancel-target buttons
+    container.querySelectorAll('.cancel-target-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const tcoord = btn.dataset.tcoord;
+            const res  = await fetch('/api/cancelled-targets/toggle', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ coord: tcoord }),
+            });
+            const data = await res.json();
+            _cancelledTargets = new Set(data.cancelled || []);
+            _renderStatusList();
+            _showCancelledMessage();
+        });
     });
 
     // Wire per-target "mark all sent" buttons
@@ -301,6 +322,26 @@ async function _resetStatus() {
     setStatus(document.getElementById('status-tracker-msg'), '✓ Zresetowano.', 'ok');
 }
 
+async function _showCancelledMessage() {
+    if (_cancelledTargets.size === 0) {
+        hide('cancelled-msg-card');
+        return;
+    }
+    try {
+        const payload = _currentAssignments.length ? { assignments: _currentAssignments } : {};
+        payload.cancelled = [..._cancelledTargets];
+        const res  = await fetch('/api/cancelled-targets/message', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+        if (res.ok && data.bbcode) {
+            document.getElementById('cancelled-msg-bbcode').value = data.bbcode;
+            show('cancelled-msg-card');
+        }
+    } catch {}
+}
+
 // Wire buttons
 document.getElementById('btn-load-status').addEventListener('click', loadAttackStatus);
 document.getElementById('btn-mark-all-sent').addEventListener('click', _markAllSent);
@@ -308,6 +349,14 @@ document.getElementById('btn-reset-status').addEventListener('click', _resetStat
 document.getElementById('btn-copy-coverage').addEventListener('click', () => {
     navigator.clipboard.writeText(document.getElementById('coverage-bbcode').value).then(() => {
         const btn = document.getElementById('btn-copy-coverage');
+        const orig = btn.textContent;
+        btn.textContent = '✓ Skopiowano!';
+        setTimeout(() => btn.textContent = orig, 2000);
+    });
+});
+document.getElementById('btn-copy-cancelled').addEventListener('click', () => {
+    navigator.clipboard.writeText(document.getElementById('cancelled-msg-bbcode').value).then(() => {
+        const btn = document.getElementById('btn-copy-cancelled');
         const orig = btn.textContent;
         btn.textContent = '✓ Skopiowano!';
         setTimeout(() => btn.textContent = orig, 2000);
