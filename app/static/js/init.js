@@ -12,7 +12,7 @@ document.querySelectorAll('.subtab-btn').forEach(btn => {
 });
 
 (async () => {
-    const [troops, targets, playerMap, settings, conflicts, fejki, burzaki] = await Promise.all([
+    const [troops, targets, playerMap, settings, conflicts, fejki, burzaki, excluded] = await Promise.all([
         fetch('/api/troops').then(r => r.json()).catch(() => []),
         fetch('/api/targets').then(r => r.json()).catch(() => []),
         fetch('/api/player-map').then(r => r.json()).catch(() => []),
@@ -20,9 +20,11 @@ document.querySelectorAll('.subtab-btn').forEach(btn => {
         fetch('/api/conflicts').then(r => r.json()).catch(() => []),
         fetch('/api/fake-targets').then(r => r.json()).catch(() => []),
         fetch('/api/burst-targets').then(r => r.json()).catch(() => []),
+        fetch('/api/excluded-replacements').then(r => r.json()).catch(() => []),
     ]);
 
     _settings = settings;
+    _excludedReplacements = new Set(Array.isArray(excluded) ? excluded : []);
     applySettings(settings);
 
     document.getElementById('targets-input').value = '';

@@ -16,6 +16,7 @@ TARGET_OWNERS_FILE = DATA_DIR / "target_owners.json"  # {target_coord: enemy_pla
 FAKE_TARGETS_FILE  = DATA_DIR / "fake_targets.json"   # ["x|y", ...]
 BURST_TARGETS_FILE = DATA_DIR / "burst_targets.json"  # [{"coord": "x|y", "building": "..."}, ...]
 ATTACK_STATUS_FILE = DATA_DIR / "attack_status.json"  # {"id": "sent"|"missed"|"unknown", …}
+EXCLUDED_REPLACEMENTS_FILE = DATA_DIR / "excluded_replacements.json"  # ["x|y", …]
 
 DEFAULT_SETTINGS: dict = {
     "action_name":             "Akcja",

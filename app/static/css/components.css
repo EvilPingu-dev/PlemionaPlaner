@@ -52,7 +52,8 @@
 .toggle-btn.enabled:hover  { background: #2a5a2a; }
 .toggle-btn.disabled:hover { background: #5a2a2a; }
 
-.row-disabled td { opacity: .45; }
+.row-disabled  td { opacity: .45; }
+.row-excluded  td { opacity: .55; background: rgba(120,20,20,.08); }
 
 /* ── Plan list modal ─────────────────────────────────────────────────────── */
 .modal {

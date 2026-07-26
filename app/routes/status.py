@@ -4,6 +4,7 @@ from flask import Blueprint, jsonify, request
 from ..planner import _dist
 from ..storage import (
     ATTACK_STATUS_FILE,
+    EXCLUDED_REPLACEMENTS_FILE,
     PLAN_FILE,
     PLAYER_MAP_FILE,
     TROOPS_FILE,
@@ -118,8 +119,9 @@ def coverage_post():
                         "message": "Brak oznaczonych jako 'missed' ataków."})
 
     # Separate pools — coords will be removed as they get assigned
-    free_offs_set   = {v["coord"] for v in villages_d if v["off"]    > 0 and v["coord"] not in all_assigned_coords}
-    free_nobles_set = {v["coord"] for v in villages_d if v["nobles"] > 0 and v["coord"] not in all_assigned_coords}
+    excluded = set(load_json(EXCLUDED_REPLACEMENTS_FILE) or [])
+    free_offs_set   = {v["coord"] for v in villages_d if v["off"]    > 0 and v["coord"] not in all_assigned_coords and v["coord"] not in excluded}
+    free_nobles_set = {v["coord"] for v in villages_d if v["nobles"] > 0 and v["coord"] not in all_assigned_coords and v["coord"] not in excluded}
     village_by_c    = {v["coord"]: v for v in villages_d}
 
     # Group missed attacks by target so we know how many each target needs

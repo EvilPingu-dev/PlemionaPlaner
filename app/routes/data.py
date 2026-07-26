@@ -5,6 +5,7 @@ from ..fetcher import fetch_village_ids as _fetch_ids
 from ..parser import parse_targets, parse_troops
 from ..storage import (
     BURST_TARGETS_FILE,
+    EXCLUDED_REPLACEMENTS_FILE,
     FAKE_TARGETS_FILE,
     TARGETS_FILE,
     TROOPS_FILE,
@@ -125,3 +126,27 @@ def _try_fetch_ids(coords: list[str]) -> None:
                 save_json(VILLAGE_IDS_FILE, existing)
     except Exception:
         pass
+
+
+# ── Excluded-from-replacements list ──────────────────────────────────────────
+
+@bp.get("/api/excluded-replacements")
+def get_excluded():
+    data = load_json(EXCLUDED_REPLACEMENTS_FILE)
+    return jsonify(data if isinstance(data, list) else [])
+
+
+@bp.post("/api/excluded-replacements/toggle")
+def toggle_excluded():
+    coord = (request.json or {}).get("coord", "").strip()
+    if not coord:
+        return jsonify({"error": "Brak koordynatu."}), 400
+    data = load_json(EXCLUDED_REPLACEMENTS_FILE)
+    excluded = set(data) if isinstance(data, list) else set()
+    if coord in excluded:
+        excluded.discard(coord)
+    else:
+        excluded.add(coord)
+    result = sorted(excluded)
+    save_json(EXCLUDED_REPLACEMENTS_FILE, result)
+    return jsonify({"excluded": result})
