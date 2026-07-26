@@ -244,6 +244,7 @@ def generate_messages(
                 "attack_link":  link,
                 "from_id":      from_id,
                 "target_id":    _t_id,
+                "player":       player,
             })
 
         for coord in asgn.get("catapults", []):
@@ -280,6 +281,7 @@ def generate_messages(
                 "attack_link":  link,
                 "from_id":      from_id,
                 "target_id":    _t_id,
+                "player":       player,
             })
 
         for coord in asgn.get("fake_offs", []):
