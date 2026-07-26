@@ -30,10 +30,12 @@ def get_player_map():
 @bp.post("/api/player-map")
 def save_player_map():
     raw = request.json.get("raw", "")
-    existing = {pm["player"]: pm.get("enabled", True) for pm in load_json(PLAYER_MAP_FILE)}
+    existing = {pm["player"]: pm for pm in load_json(PLAYER_MAP_FILE)}
     player_map = parse_player_map(raw)
     for pm in player_map:
-        pm["enabled"] = existing.get(pm["player"], True)
+        prev = existing.get(pm["player"], {})
+        pm["enabled"]          = prev.get("enabled", True)
+        pm["show_all_attacks"] = prev.get("show_all_attacks", False)
     save_json(PLAYER_MAP_FILE, player_map)
     return jsonify({"count": len(player_map), "player_map": player_map})
 
@@ -47,6 +49,20 @@ def toggle_player():
     for pm in player_map:
         if pm["player"] == player:
             pm["enabled"] = not pm.get("enabled", True)
+            break
+    save_json(PLAYER_MAP_FILE, player_map)
+    return jsonify({"player_map": player_map})
+
+
+@bp.post("/api/player-map/toggle-show-all")
+def toggle_show_all():
+    player = (request.json or {}).get("player", "").strip()
+    if not player:
+        return jsonify({"error": "Brak nazwy gracza."}), 400
+    player_map = load_json(PLAYER_MAP_FILE)
+    for pm in player_map:
+        if pm["player"] == player:
+            pm["show_all_attacks"] = not pm.get("show_all_attacks", False)
             break
     save_json(PLAYER_MAP_FILE, player_map)
     return jsonify({"player_map": player_map})
@@ -76,10 +92,12 @@ def auto_fetch_player_map():
 
     try:
         result = _fetch_all(server, village_coords, target_coords)
-        existing_flags = {pm["player"]: pm.get("enabled", True) for pm in load_json(PLAYER_MAP_FILE)}
+        existing_flags = {pm["player"]: pm for pm in load_json(PLAYER_MAP_FILE)}
         new_map = result["player_map"]
         for pm in new_map:
-            pm["enabled"] = existing_flags.get(pm["player"], True)
+            prev = existing_flags.get(pm["player"], {})
+            pm["enabled"]          = prev.get("enabled", True)
+            pm["show_all_attacks"] = prev.get("show_all_attacks", False)
         save_json(PLAYER_MAP_FILE,    new_map)
         save_json(VILLAGE_IDS_FILE,   result["village_id_map"])
         save_json(TARGET_OWNERS_FILE, result.get("target_owner_map", {}))

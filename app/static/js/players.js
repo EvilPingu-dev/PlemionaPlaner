@@ -36,12 +36,18 @@ function renderPlayers(playerMap) {
     document.getElementById('players-count').textContent = playerMap.length;
     document.querySelector('#players-table tbody').innerHTML = playerMap.map(pm => {
         const enabled  = pm.enabled !== false;
+        const showAll  = !!pm.show_all_attacks;
         const toggleBtn = `<button class="toggle-btn ${enabled ? 'enabled' : 'disabled'}" data-player="${escHtml(pm.player)}"
             title="${enabled ? 'Kliknij aby wyłączyć' : 'Kliknij aby włączyć'}">
             ${enabled ? '🟢 Włączony' : '🔴 Wyłączony'}</button>`;
+        const showAllChk = `<label class="show-all-label" title="Gracz widzi ataki innych na te same cele">
+            <input type="checkbox" class="show-all-chk" data-player="${escHtml(pm.player)}" ${showAll ? 'checked' : ''}>
+            ${showAll ? '👁 Widzi' : 'Nie'}
+        </label>`;
         return `<tr class="${enabled ? '' : 'row-disabled'}">
             <td>${toggleBtn}</td>
             <td><strong>${pm.player}</strong></td>
+            <td>${showAllChk}</td>
             <td>${pm.villages.length}</td>
             <td class="coords-cell">${pm.villages.map(c => `<span class="coord-tag">${c}</span>`).join(' ')}</td>
         </tr>`;
@@ -61,8 +67,21 @@ function renderPlayers(playerMap) {
     document.querySelectorAll('.toggle-btn').forEach(btn => {
         btn.addEventListener('click', () => togglePlayer(btn.dataset.player));
     });
+    document.querySelectorAll('.show-all-chk').forEach(chk => {
+        chk.addEventListener('change', () => toggleShowAll(chk.dataset.player));
+    });
 
     show('players-table-card');
+}
+
+async function toggleShowAll(playerName) {
+    try {
+        const res  = await fetch('/api/player-map/toggle-show-all', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ player: playerName }),
+        });
+        if (res.ok) renderPlayers((await res.json()).player_map);
+    } catch {}
 }
 
 async function togglePlayer(playerName) {

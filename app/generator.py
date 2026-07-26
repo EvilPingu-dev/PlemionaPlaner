@@ -299,6 +299,11 @@ def generate_messages(
         for a in pl_atks:
             all_by_target.setdefault(a["target_coord"], []).append(a)
 
+    # Players who opted in to seeing all attacks on their targets
+    show_all_set: set[str] = {
+        pm["player"] for pm in player_map if pm.get("show_all_attacks", False)
+    }
+
     for player, attacks in sorted(player_attacks.items()):
         # Group own attacks by target, ordered by earliest send
         own_by_target: dict[str, list] = {}
@@ -327,25 +332,26 @@ def generate_messages(
                 ui_attacks.append(a)
                 row_i += 1
 
-            # Other players' attacks on the same target (informational)
-            for a in sorted(all_by_target.get(tcoord, []), key=lambda x: x["send_dt"]):
-                if a["player"] == player:
-                    continue
-                other = a["player"]
-                dim = "#888888"
-                rows.append(
-                    f"[*]{row_i}"
-                    f"[|][color={dim}][player]{other}[/player][/color]"
-                    f"[|][color={dim}]{a['off']}[/color]"
-                    f"[|][color={dim}]{a['nobles']}[/color]"
-                    f"[|][color={dim}]-[/color]"
-                    f"[|][color={dim}]{a['send_str']}[/color]"
-                    f"[|][color={dim}]{a['arrival_str']}[/color]"
-                    f"[|][color={dim}][coord]{a['from_coord']}[/coord][/color]"
-                    f"[|][color={dim}][coord]{a['target_coord']}[/coord][/color]"
-                )
-                ui_attacks.append({**a, "is_foreign": True})
-                row_i += 1
+            # Other players' attacks on the same target (informational — only if opted in)
+            if player in show_all_set:
+                for a in sorted(all_by_target.get(tcoord, []), key=lambda x: x["send_dt"]):
+                    if a["player"] == player:
+                        continue
+                    other = a["player"]
+                    dim = "#888888"
+                    rows.append(
+                        f"[*]{row_i}"
+                        f"[|][color={dim}][player]{other}[/player][/color]"
+                        f"[|][color={dim}]{a['off']}[/color]"
+                        f"[|][color={dim}]{a['nobles']}[/color]"
+                        f"[|][color={dim}]-[/color]"
+                        f"[|][color={dim}]{a['send_str']}[/color]"
+                        f"[|][color={dim}]{a['arrival_str']}[/color]"
+                        f"[|][color={dim}][coord]{a['from_coord']}[/coord][/color]"
+                        f"[|][color={dim}][coord]{a['target_coord']}[/coord][/color]"
+                    )
+                    ui_attacks.append({**a, "is_foreign": True})
+                    row_i += 1
 
         header = (
             "[table][**]"
