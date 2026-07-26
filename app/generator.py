@@ -102,13 +102,25 @@ def generate_messages(
 
     arrival_dt_default = datetime.fromisoformat(settings["arrival_datetime"]) if settings.get("arrival_datetime") else None
     window_min   = int(settings.get("arrival_window_minutes", 1))
-    off_speed    = float(settings.get("off_speed", 18))
-    noble_speed  = float(settings.get("noble_speed", 35))
+    off_speed        = float(settings.get("off_speed", 18))
+    noble_speed      = float(settings.get("noble_speed", 35))
+    noble_escort_min = int(settings.get("noble_escort_min", 100))
     greeting     = settings.get("greeting", "")
     leader       = settings.get("leader_name", "")
     server       = settings.get("server", "")
     action_name  = settings.get("action_name", "Akcja")
     arrival_dt_fmt = arrival_dt_default.strftime("%d.%m.%Y") if arrival_dt_default else ""
+
+    # Pre-scan: for each village count how many nobles it sends and whether it
+    # also appears as an OFF sender.  When a village does both, its troops must
+    # be split: each noble gets `noble_escort_min` escort; the OFF gets the rest.
+    _village_noble_count: dict[str, int] = {}
+    _village_is_off: set[str] = set()
+    for asgn in assignments:
+        for coord in asgn.get("offs", []):
+            _village_is_off.add(coord)
+        for coord in asgn.get("nobles", []):
+            _village_noble_count[coord] = _village_noble_count.get(coord, 0) + 1
 
     player_attacks: dict[str, list] = {}
 
@@ -144,11 +156,26 @@ def generate_messages(
             label      = f"Wyślij {atype}"
             link       = _attack_link(server, from_id, _t_id, label)
 
+            # Determine effective OFF count for this attack row.
+            # When the village sends both an OFF and noble(s), troops must be split:
+            #   • Noble row  → escort = noble_escort_min  per noble
+            #   • OFF row    → full off minus total escort reserved for all nobles
+            total_nobles_from_village = _village_noble_count.get(coord, 0)
+            village_also_sends_off    = coord in _village_is_off
+            if noble_cnt > 0 and village_also_sends_off:
+                # This is a noble attack from a village that also sends an OFF
+                displayed_off = noble_escort_min
+            elif noble_cnt == 0 and total_nobles_from_village > 0:
+                # This is the OFF from a village that also sends noble(s)
+                displayed_off = max(0, v["off"] - total_nobles_from_village * noble_escort_min)
+            else:
+                displayed_off = v["off"]
+
             attack = {
                 "type":         atype,
                 "from_coord":   coord,
                 "target_coord": _tcoord,
-                "off":          v["off"],
+                "off":          displayed_off,
                 "nobles":       noble_cnt,
                 "burzenie":     "-",
                 "send_dt":      send_dt.isoformat(),
