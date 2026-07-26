@@ -206,20 +206,44 @@ def plan_action(
         if noble_sort_invert:
             noble_candidates.reverse()
 
-        for i, nv in noble_candidates:
-            if len(chosen_nobles) >= t["nobles_needed"]:
-                break
-            if _blocked(nv["coord"]):
-                continue
-            chosen_nobles.append(nv)
-            used_noble_indices.add(i)
-            noble_assigned_count += 1
-            fp = c2p.get(nv["coord"])
-            if fp:
-                picked_for_target.add(fp)
-                if enemy_owner:
-                    enemy_player_friendly.setdefault(enemy_owner, set()).add(fp)
-                    already_on_enemy.add(fp)
+        # ── Prefer a single player who can cover the entire noble requirement ──
+        # Group candidates by player; if any player has enough nobles and none
+        # are blocked, use that group exclusively (keeps train in one player's hands).
+        if c2p and t["nobles_needed"] > 1:
+            from collections import defaultdict
+            by_player: dict = defaultdict(list)
+            for i, nv in noble_candidates:
+                fp = c2p.get(nv["coord"])
+                if fp:
+                    by_player[fp].append((i, nv))
+            # Pick the best player: enough nobles, no blocked, sorted by our key
+            for fp, group in by_player.items():
+                if len(group) >= t["nobles_needed"] and not any(_blocked(nv["coord"]) for _, nv in group):
+                    chosen_nobles = [nv for _, nv in group[:t["nobles_needed"]]]
+                    for idx, _ in group[:t["nobles_needed"]]:
+                        used_noble_indices.add(idx)
+                        noble_assigned_count += 1
+                    picked_for_target.add(fp)
+                    if enemy_owner:
+                        enemy_player_friendly.setdefault(enemy_owner, set()).add(fp)
+                        already_on_enemy.add(fp)
+                    break
+
+        if not chosen_nobles:
+            for i, nv in noble_candidates:
+                if len(chosen_nobles) >= t["nobles_needed"]:
+                    break
+                if _blocked(nv["coord"]):
+                    continue
+                chosen_nobles.append(nv)
+                used_noble_indices.add(i)
+                noble_assigned_count += 1
+                fp = c2p.get(nv["coord"])
+                if fp:
+                    picked_for_target.add(fp)
+                    if enemy_owner:
+                        enemy_player_friendly.setdefault(enemy_owner, set()).add(fp)
+                        already_on_enemy.add(fp)
         offs_detail = [
             {
                 "coord":    v["coord"],
