@@ -241,6 +241,55 @@
 .reload-coord:hover    { color: #a0ccf0; }
 .reload-coord:disabled { color: var(--text-dim); cursor: default; }
 
+/* Pick-from-list (▾) button */
+.pick-coord {
+    background: none;
+    border: none;
+    color: #7aaad0;
+    cursor: pointer;
+    font-size: .78rem;
+    line-height: 1;
+    margin-right: 1px;
+    padding: 0 1px;
+    vertical-align: middle;
+}
+.pick-coord:hover { color: #a0ccf0; }
+
+/* Candidates popup */
+#candidates-popup {
+    background: #0d1a2e;
+    border: 1px solid #2a4a7a;
+    border-radius: 6px;
+    box-shadow: 0 4px 20px rgba(0,0,0,.7);
+    display: none;
+    max-height: 340px;
+    min-width: 290px;
+    overflow-y: auto;
+    position: absolute;
+    z-index: 9000;
+}
+.cand-loading {
+    color: #7a9ab0;
+    font-size: .8rem;
+    padding: 10px 12px;
+}
+.cand-item {
+    border-bottom: 1px solid #1a2a4a;
+    cursor: pointer;
+    display: grid;
+    gap: 2px 6px;
+    grid-template-columns: auto 1fr auto;
+    padding: 6px 10px;
+}
+.cand-item:last-child { border-bottom: none; }
+.cand-item:hover      { background: #1a2f50; }
+.cand-item.cand-night { background: #0a1425; }
+.cand-item.cand-night:hover { background: #142040; }
+.cand-coord  { color: #d0e8ff; font-family: monospace; font-size: .82rem; }
+.cand-player { color: #c0a060; font-size: .72rem; grid-column: 2; align-self: center; }
+.cand-meta   { color: #7a9ab0; font-size: .72rem; grid-column: 3; grid-row: 1; text-align: right; white-space: nowrap; }
+.cand-off    { color: #9ab0c8; font-size: .7rem;  grid-column: 1 / -1; }
+
 /* Player name prefix inside a coord tag */
 .tag-player {
     color: var(--gold-dim);

@@ -4,6 +4,7 @@ let _settings           = {};
 let _currentAssignments = [];
 let _planEditMode       = false;
 let _blacklist          = {}; // { targetCoord: { offs: Set, nobles: Set } }
+let _candidatesPopup    = null;
 
 async function runPlan() {
     const status = document.getElementById('plan-status');
@@ -98,7 +99,8 @@ function _renderAssignments(assignments, editMode) {
                 ? `<button class="remove-coord" data-aidx="${aIdx}" data-key="${key}" data-cidx="${idx}" title="Usuń">✕</button>`
                 : '';
             const reloadBtn = `<button class="reload-coord" data-aidx="${aIdx}" data-key="${key}" data-cidx="${idx}" data-coord="${d.coord}" data-target="${a.target}" title="Zamień na następną najlepszą wioskę">↻</button>`;
-            return `<span class="coord-tag ${cls}${isNight ? ' night-send' : ''}">${removeBtn}${reloadBtn}${playerSpan}${d.coord}${distStr}${nightMark}</span>`;
+            const pickBtn  = `<button class="pick-coord"   data-aidx="${aIdx}" data-key="${key}" data-cidx="${idx}" data-coord="${d.coord}" data-target="${a.target}" title="Wybierz z listy">▾</button>`;
+            return `<span class="coord-tag ${cls}${isNight ? ' night-send' : ''}">${removeBtn}${reloadBtn}${pickBtn}${playerSpan}${d.coord}${distStr}${nightMark}</span>`;
         };
 
         const offTags   = (a.offs_detail   || a.offs.map(c   => ({coord: c, dist: null}))).map((d, i) => makeTag(d, offSpeed,   '',          'offs',   i, offArrivalStr)).join('');
@@ -157,6 +159,12 @@ function _renderAssignments(assignments, editMode) {
             btn.addEventListener('click', () =>
                 reloadCoord(parseInt(btn.dataset.aidx), btn.dataset.key, btn.dataset.coord, btn.dataset.target)
             );
+        });
+        document.querySelectorAll('.pick-coord').forEach(btn => {
+            btn.addEventListener('click', e => {
+                e.stopPropagation();
+                showCandidates(btn, parseInt(btn.dataset.aidx), btn.dataset.key, btn.dataset.coord, btn.dataset.target);
+            });
         });
         document.querySelectorAll('.add-coord-btn').forEach(btn => {
             btn.addEventListener('click', () => {
@@ -251,16 +259,99 @@ async function reloadCoord(aIdx, key, oldCoord, targetCoord) {
     const btn = document.querySelector(`.reload-coord[data-aidx="${aIdx}"][data-key="${key}"][data-coord="${oldCoord}"]`);
     if (btn) { btn.textContent = '⏳'; btn.disabled = true; }
 
+    const _doReload = async (bl) => fetch('/api/plan/reload-coord', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ target_coord: targetCoord, old_coord: oldCoord, type: key,
+                               blacklisted: Array.from(bl) }),
+    });
+
     try {
-        const res  = await fetch('/api/plan/reload-coord', {
+        let res  = await _doReload(_blacklist[targetCoord][key]);
+        let data = await res.json();
+        if (!res.ok) {
+            // Wrap around: clear blacklist and retry from the beginning
+            _blacklist[targetCoord][key].clear();
+            _blacklist[targetCoord][key].add(oldCoord);
+            res  = await _doReload(_blacklist[targetCoord][key]);
+            data = await res.json();
+        }
+        if (!res.ok) { alert(data.error || 'Brak dostępnych wiosek.'); return; }
+        _currentAssignments = data.assignments;
+        _renderAssignments(_currentAssignments, _planEditMode);
+    } catch { alert('Błąd połączenia.'); }
+}
+
+function _getCandidatesPopup() {
+    if (_candidatesPopup) return _candidatesPopup;
+    const el = document.createElement('div');
+    el.id = 'candidates-popup';
+    document.body.appendChild(el);
+    document.addEventListener('click', e => {
+        if (_candidatesPopup && !_candidatesPopup.contains(e.target) && !e.target.classList.contains('pick-coord'))
+            _candidatesPopup.style.display = 'none';
+    });
+    _candidatesPopup = el;
+    return el;
+}
+
+async function showCandidates(btn, aIdx, key, oldCoord, targetCoord) {
+    const popup = _getCandidatesPopup();
+    const rect  = btn.getBoundingClientRect();
+    popup.style.display = 'block';
+    popup.innerHTML = '<div class="cand-loading">Ładowanie…</div>';
+    const left = Math.min(rect.left, window.innerWidth - 310);
+    const top  = rect.bottom + window.scrollY + 4;
+    popup.style.left = left + 'px';
+    popup.style.top  = top  + 'px';
+
+    // Exclude coords already assigned to this target (except the one being replaced)
+    const a = _currentAssignments.find(a => a.target === targetCoord);
+    const excl = a ? (a[key] || []).filter(c => c !== oldCoord) : [];
+
+    try {
+        const res  = await fetch('/api/plan/candidates', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                target_coord: targetCoord, old_coord: oldCoord, type: key,
-                blacklisted: Array.from(_blacklist[targetCoord][key]),
-            }),
+            body: JSON.stringify({ target_coord: targetCoord, old_coord: oldCoord,
+                                   type: key, blacklisted: excl, limit: 10 }),
         });
         const data = await res.json();
-        if (!res.ok) { alert(data.error || 'Brak dostępnych wiosek.'); return; }
+        const cands = data.candidates || [];
+        if (!cands.length) {
+            popup.innerHTML = '<div class="cand-loading" style="color:#c06060">Brak dostępnych wiosek.</div>';
+            return;
+        }
+        popup.innerHTML = cands.map(c => {
+            const night = c.is_night ? ' 🌙' : '';
+            return `<div class="cand-item${c.is_night ? ' cand-night' : ''}"
+                data-aidx="${aIdx}" data-key="${key}" data-old="${oldCoord}"
+                data-new="${c.coord}" data-target="${targetCoord}">
+                <span class="cand-coord">${c.coord}</span>
+                ${c.player ? `<span class="cand-player">${c.player}</span>` : ''}
+                <span class="cand-meta">${c.dist} pol · ${c.travel_min}min${night}</span>
+                <span class="cand-off">OFF: ${c.off}${c.rams ? ` · Tar: ${c.rams}` : ''}</span>
+            </div>`;
+        }).join('');
+        popup.querySelectorAll('.cand-item').forEach(item => {
+            item.addEventListener('click', async () => {
+                popup.style.display = 'none';
+                await swapCoord(parseInt(item.dataset.aidx), item.dataset.key,
+                                item.dataset.old, item.dataset.new, item.dataset.target);
+            });
+        });
+    } catch {
+        popup.innerHTML = '<div class="cand-loading" style="color:#c06060">Błąd połączenia.</div>';
+    }
+}
+
+async function swapCoord(aIdx, key, oldCoord, newCoord, targetCoord) {
+    try {
+        const res  = await fetch('/api/plan/swap-coord', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ target_coord: targetCoord, old_coord: oldCoord,
+                                   new_coord: newCoord, type: key }),
+        });
+        const data = await res.json();
+        if (!res.ok) { alert(data.error || 'Błąd.'); return; }
         _currentAssignments = data.assignments;
         _renderAssignments(_currentAssignments, _planEditMode);
     } catch { alert('Błąd połączenia.'); }

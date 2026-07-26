@@ -233,6 +233,158 @@ def reload_coord():
     return jsonify({"assignments": assignments})
 
 
+@bp.post("/api/plan/candidates")
+def get_candidates():
+    """Return up to N best available villages for a given coord slot."""
+    data         = request.json or {}
+    target_coord = data.get("target_coord", "")
+    old_coord    = data.get("old_coord", "")
+    coord_type   = data.get("type", "offs")
+    blacklisted  = set(data.get("blacklisted", []))
+    limit        = min(int(data.get("limit", 10)), 30)
+
+    villages   = load_json(TROOPS_FILE)
+    targets_   = load_json(TARGETS_FILE)
+    plan       = load_json(PLAN_FILE)
+    player_map = load_json(PLAYER_MAP_FILE)
+    settings   = load_settings()
+
+    if not isinstance(plan, dict):
+        return jsonify({"candidates": []})
+
+    assignments = plan.get("assignments", [])
+    a_idx       = next((i for i, a in enumerate(assignments) if a["target"] == target_coord), None)
+    target_data = next((t for t in targets_ if t["coord"] == target_coord), None)
+    if a_idx is None or target_data is None:
+        return jsonify({"candidates": []})
+
+    disabled: set[str] = set()
+    for pm in player_map:
+        if not pm.get("enabled", True):
+            disabled.update(pm.get("villages", []))
+
+    used: set[str] = set()
+    for i, a in enumerate(assignments):
+        for c in a.get("offs", []):
+            if not (i == a_idx and c == old_coord and coord_type == "offs"):
+                used.add(c)
+        for c in a.get("nobles", []):
+            if not (i == a_idx and c == old_coord and coord_type == "nobles"):
+                used.add(c)
+
+    skip = used | blacklisted | disabled
+    tx, ty = target_data["x"], target_data["y"]
+
+    off_speed   = float(settings.get("off_speed",   18))
+    ram_speed   = float(settings.get("ram_speed",   30))
+    noble_speed = float(settings.get("noble_speed", 35))
+
+    player_by_coord: dict[str, str] = {}
+    for pm in player_map:
+        for coord in pm.get("villages", []):
+            player_by_coord[coord.strip()] = pm["player"]
+
+    arrival_raw = settings.get("arrival_datetime", "")
+    arrival_dt: datetime | None = None
+    if arrival_raw:
+        try:
+            arrival_dt = datetime.fromisoformat(arrival_raw)
+        except ValueError:
+            pass
+
+    if coord_type == "offs":
+        cands = [v for v in villages if v["off"] > 0 and v["coord"] not in skip]
+    else:
+        cands = [v for v in villages if v["nobles"] > 0 and v["coord"] not in skip]
+
+    def _spd(v):
+        return (ram_speed if v.get("rams", 0) > 0 else off_speed) if coord_type == "offs" else noble_speed
+
+    cands.sort(key=lambda v: (int(is_night_send(_dist(v["x"], v["y"], tx, ty), _spd(v), arrival_dt)),
+                               _dist(v["x"], v["y"], tx, ty)))
+
+    result = []
+    for v in cands[:limit]:
+        d   = round(_dist(v["x"], v["y"], tx, ty), 1)
+        spd = _spd(v)
+        result.append({
+            "coord":      v["coord"],
+            "dist":       d,
+            "travel_min": round(d * spd, 1),
+            "speed":      spd,
+            "off":        v["off"],
+            "nobles":     v["nobles"],
+            "rams":       v.get("rams", 0),
+            "player":     player_by_coord.get(v["coord"], ""),
+            "is_night":   is_night_send(d, spd, arrival_dt),
+        })
+    return jsonify({"candidates": result})
+
+
+@bp.post("/api/plan/swap-coord")
+def swap_coord():
+    """Directly replace old_coord with a chosen new_coord in the saved plan."""
+    data         = request.json or {}
+    target_coord = data.get("target_coord", "")
+    old_coord    = data.get("old_coord", "")
+    new_coord    = data.get("new_coord", "")
+    coord_type   = data.get("type", "offs")
+
+    villages = load_json(TROOPS_FILE)
+    targets_ = load_json(TARGETS_FILE)
+    plan     = load_json(PLAN_FILE)
+    settings = load_settings()
+
+    if not isinstance(plan, dict):
+        return jsonify({"error": "Brak planu."}), 400
+
+    assignments = plan.get("assignments", [])
+    a_idx       = next((i for i, a in enumerate(assignments) if a["target"] == target_coord), None)
+    target_data = next((t for t in targets_ if t["coord"] == target_coord), None)
+    if a_idx is None or target_data is None:
+        return jsonify({"error": "Cel nie znaleziony."}), 400
+
+    new_v = next((v for v in villages if v["coord"] == new_coord), None)
+    if not new_v:
+        return jsonify({"error": "Wioska nie znaleziona."}), 400
+
+    tx, ty      = target_data["x"], target_data["y"]
+    off_speed   = float(settings.get("off_speed",   18))
+    ram_speed   = float(settings.get("ram_speed",   30))
+    noble_speed = float(settings.get("noble_speed", 35))
+    arrival_raw = settings.get("arrival_datetime", "")
+    arrival_dt: datetime | None = None
+    if arrival_raw:
+        try:
+            arrival_dt = datetime.fromisoformat(arrival_raw)
+        except ValueError:
+            pass
+
+    dist = round(_dist(new_v["x"], new_v["y"], tx, ty), 1)
+    if coord_type == "offs":
+        eff_spd = ram_speed if new_v.get("rams", 0) > 0 else off_speed
+    else:
+        eff_spd = noble_speed
+    is_ngt = is_night_send(dist, eff_spd, arrival_dt)
+
+    a = assignments[a_idx]
+    lst    = a.get(coord_type, [])
+    detail = a.get(coord_type + "_detail", [])
+    try:
+        idx = lst.index(old_coord)
+        lst[idx] = new_coord
+        new_detail = {"coord": new_coord, "dist": dist, "is_night": is_ngt}
+        if coord_type == "offs":
+            new_detail["speed"] = eff_spd
+        if idx < len(detail):
+            detail[idx] = new_detail
+    except ValueError:
+        pass
+
+    save_json(PLAN_FILE, plan)
+    return jsonify({"assignments": assignments})
+
+
 @bp.post("/api/plan/override")
 def plan_override():
     """Save manually edited assignments back to PLAN_FILE."""
