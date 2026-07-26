@@ -1,4 +1,28 @@
 /* ── Settings form ───────────────────────────────────────────────────────── */
+
+/* BBCode toolbar */
+.bbcode-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-bottom: 4px;
+}
+.bbcode-toolbar button {
+    background: var(--bg-card, #1a1610);
+    border: 1px solid var(--border, #4a3f28);
+    border-radius: 3px;
+    color: var(--text, #d4c49a);
+    cursor: pointer;
+    font-size: .82rem;
+    min-width: 30px;
+    padding: 2px 7px;
+    line-height: 1.6;
+}
+.bbcode-toolbar button:hover {
+    background: var(--accent, #7a5c20);
+    border-color: var(--accent-light, #c8a84b);
+}
+
 .form-grid {
     display: grid;
     gap: 12px;

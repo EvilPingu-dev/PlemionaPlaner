@@ -1,5 +1,34 @@
 /* ── USTAWIENIA ─────────────────────────────────────────────────────────── */
 
+// BBCode toolbar — handles all .bbcode-toolbar buttons
+document.addEventListener('click', function (e) {
+    const btn = e.target.closest('.bbcode-toolbar button');
+    if (!btn) return;
+    e.preventDefault();
+    const taId  = btn.closest('.bbcode-toolbar').dataset.target;
+    const ta    = document.getElementById(taId);
+    if (!ta) return;
+    let open  = btn.dataset.open  || '';
+    const close = btn.dataset.close || '';
+    const prompt = btn.dataset.prompt;
+    if (prompt) {
+        const val = window.prompt(prompt);
+        if (val === null) return;
+        open = open + val + ']';
+    }
+    const start = ta.selectionStart;
+    const end   = ta.selectionEnd;
+    const sel   = ta.value.slice(start, end);
+    const replacement = open + sel + close;
+    ta.setRangeText(replacement, start, end, 'select');
+    // Move cursor after inserted tags if no selection
+    if (start === end) {
+        const pos = start + open.length;
+        ta.setSelectionRange(pos, pos);
+    }
+    ta.focus();
+});
+
 async function loadSettings() {
     try {
         const res = await fetch('/api/settings');

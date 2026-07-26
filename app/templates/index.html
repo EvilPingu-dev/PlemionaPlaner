@@ -594,10 +594,20 @@ void 0;</pre>
             <div id="arrival-slots-list"></div>
         </div>
 
-        <label class="label-block" style="margin-top:14px">Treść wiadomości (wstęp)
-            <textarea id="s-greeting" rows="8"
-                placeholder="Witam,&#10;poniżej są wasze cele…"></textarea>
-        </label>
+        <label class="label-block" style="margin-top:14px">Treść wiadomości (wstęp)</label>
+        <div class="bbcode-toolbar" data-target="s-greeting">
+            <button type="button" data-open="[b]"    data-close="[/b]"    title="Pogrubienie"><b>B</b></button>
+            <button type="button" data-open="[i]"    data-close="[/i]"    title="Kursywa"><i>I</i></button>
+            <button type="button" data-open="[u]"    data-close="[/u]"    title="Podkreślenie"><u>U</u></button>
+            <button type="button" data-open="[s]"    data-close="[/s]"    title="Przekreślenie"><s>S</s></button>
+            <button type="button" data-open="[url]"  data-close="[/url]"  title="Link">URL</button>
+            <button type="button" data-open="[img]"  data-close="[/img]"  title="Obrazek">IMG</button>
+            <button type="button" data-open="[quote]" data-close="[/quote]" title="Cytat">QUOTE</button>
+            <button type="button" data-open="[color=#" data-close="[/color]" data-prompt="Podaj kolor (np. ff0000):" title="Kolor tekstu">CLR</button>
+            <button type="button" data-open="[size=" data-close="[/size]" data-prompt="Podaj rozmiar (np. 14):" title="Rozmiar tekstu">SIZE</button>
+        </div>
+        <textarea id="s-greeting" rows="8"
+            placeholder="Witam,&#10;poniżej są wasze cele…"></textarea>
     </div>
 
     <div class="card">
