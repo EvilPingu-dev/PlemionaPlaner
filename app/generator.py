@@ -103,6 +103,7 @@ def generate_messages(
     arrival_dt_default = datetime.fromisoformat(settings["arrival_datetime"]) if settings.get("arrival_datetime") else None
     window_min   = int(settings.get("arrival_window_minutes", 1))
     off_speed        = float(settings.get("off_speed", 18))
+    ram_speed        = float(settings.get("ram_speed", 30))
     noble_speed      = float(settings.get("noble_speed", 35))
     noble_escort_min = int(settings.get("noble_escort_min", 100))
     greeting     = settings.get("greeting", "")
@@ -190,7 +191,9 @@ def generate_messages(
             player_attacks.setdefault(player, []).append(attack)
 
         for coord in asgn.get("offs", []):
-            _add(coord, "OFF", off_speed)
+            v_off = village_by_coord.get(coord)
+            v_spd = ram_speed if (v_off and v_off.get("rams", 0) > 0) else off_speed
+            _add(coord, "OFF", v_spd)
         for coord in asgn.get("nobles", []):
             _add(coord, "SZLACHCIC", noble_speed, noble_cnt=1,
                  _arr_dt=noble_arrival_dt, _arr_str=noble_arrival_str)

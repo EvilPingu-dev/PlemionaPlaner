@@ -71,7 +71,9 @@ def export_csv():
             ])
 
         for coord in asgn.get("offs", []):
-            _row(coord, off_speed, "OFF", arr_dt)
+            v_off = village_by_coord.get(coord)
+            v_spd = ram_speed if (v_off and v_off.get("rams", 0) > 0) else off_speed
+            _row(coord, v_spd, "OFF", arr_dt)
         for coord in asgn.get("nobles", []):
             _row(coord, noble_speed, "SZLACHCIC", noble_dt)
 
@@ -99,6 +101,7 @@ def export_forum_players():
     assignments = body.get("assignments") or plan.get("assignments", [])
 
     off_speed   = float(settings.get("off_speed",   18))
+    ram_speed   = float(settings.get("ram_speed",   30))
     noble_speed = float(settings.get("noble_speed", 35))
     action_name = settings.get("action_name", "Akcja")
     server      = settings.get("server", "")
@@ -143,7 +146,9 @@ def export_forum_players():
             )
 
         for coord in asgn.get("offs", []):
-            _add_row(coord, off_speed, "OFF", arr_dt)
+            v_off = village_by_coord.get(coord)
+            v_spd = ram_speed if (v_off and v_off.get("rams", 0) > 0) else off_speed
+            _add_row(coord, v_spd, "OFF", arr_dt)
         for coord in asgn.get("nobles", []):
             _add_row(coord, noble_speed, "SZLACHCIC", noble_dt)
 

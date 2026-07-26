@@ -73,6 +73,7 @@ def forum_overview():
     arrival_raw = settings.get("arrival_datetime", "")
     arrival_str = arrival_raw[:16].replace("T", " ") if arrival_raw else "?"
     off_speed   = float(settings.get("off_speed",   18))
+    ram_speed   = float(settings.get("ram_speed",   30))
     noble_speed = float(settings.get("noble_speed", 35))
     summary     = plan.get("summary", {})
     assignments = plan["assignments"]
@@ -120,7 +121,8 @@ def forum_overview():
             coord      = d["coord"]
             player_col = f"[player]{player_by_coord[coord]}[/player]" if player_by_coord.get(coord) else "-"
             night      = " 🌙" if d.get("is_night") else ""
-            rows.append(f"[*]{row_idx}[|][coord]{coord}[/coord][|]{player_col}[|][b]OFF[/b][|]{_send_str(coord, d.get('dist'), off_speed)}{night}[|][coord]{a['target']}[/coord]")
+            spd        = d.get("speed") or off_speed
+            rows.append(f"[*]{row_idx}[|][coord]{coord}[/coord][|]{player_col}[|][b]OFF[/b][|]{_send_str(coord, d.get('dist'), spd)}{night}[|][coord]{a['target']}[/coord]")
             row_idx += 1
 
         for d in nobles_detail:
