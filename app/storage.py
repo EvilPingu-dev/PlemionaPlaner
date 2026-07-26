@@ -75,3 +75,19 @@ def load_settings() -> dict:
         except (json.JSONDecodeError, OSError):
             pass
     return dict(DEFAULT_SETTINGS)
+
+
+def load_troops() -> list:
+    """Load troops from disk and recalculate 'off' using the current OFF_KEYS.
+
+    This ensures old imports (made before OFF_KEYS changed) produce correct
+    off scores without requiring a re-import.
+    """
+    from .parser import OFF_KEYS, FARM_SPACE
+    villages = load_json(TROOPS_FILE)
+    if not isinstance(villages, list):
+        return []
+    for v in villages:
+        troops = v.get("troops", {})
+        v["off"] = sum(troops.get(k, 0) * FARM_SPACE.get(k, 1) for k in OFF_KEYS)
+    return villages

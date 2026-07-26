@@ -14,6 +14,7 @@ from .storage import (
     TROOPS_FILE,
     VILLAGE_IDS_FILE,
     load_json,
+    load_troops,
     load_settings,
     save_json,
 )
@@ -38,7 +39,7 @@ def save_plan(name: str) -> str:
 
     snapshot = {
         "name":        safe,
-        "troops":      load_json(TROOPS_FILE),
+        "troops":      load_troops(),
         "targets":     load_json(TARGETS_FILE),
         "player_map":  load_json(PLAYER_MAP_FILE),
         "village_ids": load_json(VILLAGE_IDS_FILE),

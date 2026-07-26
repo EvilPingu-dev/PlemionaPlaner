@@ -12,6 +12,7 @@ from ..storage import (
     TROOPS_FILE,
     VILLAGE_IDS_FILE,
     load_json,
+    load_troops,
     load_settings,
     save_json,
 )
@@ -23,7 +24,7 @@ bp = Blueprint("messages", __name__)
 
 @bp.post("/api/messages")
 def generate_messages():
-    villages   = load_json(TROOPS_FILE)
+    villages   = load_troops()
     targets    = load_json(TARGETS_FILE)
     plan       = load_json(PLAN_FILE)
     player_map = load_json(PLAYER_MAP_FILE)

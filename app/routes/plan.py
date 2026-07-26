@@ -17,6 +17,7 @@ from ..storage import (
     TROOPS_FILE,
     VILLAGE_IDS_FILE,
     load_json,
+    load_troops,
     load_settings,
     save_json,
 )
@@ -42,7 +43,7 @@ def save_settings():
 
 @bp.post("/api/plan")
 def run_plan():
-    villages = load_json(TROOPS_FILE)
+    villages = load_troops()
     targets  = load_json(TARGETS_FILE)
 
     if not villages:
@@ -145,7 +146,7 @@ def reload_coord():
     coord_type   = data.get("type", "offs")
     blacklisted  = set(data.get("blacklisted", []))
 
-    villages   = load_json(TROOPS_FILE)
+    villages   = load_troops()
     targets_   = load_json(TARGETS_FILE)
     plan       = load_json(PLAN_FILE)
     player_map = load_json(PLAYER_MAP_FILE)
@@ -243,7 +244,7 @@ def get_candidates():
     blacklisted  = set(data.get("blacklisted", []))
     limit        = min(int(data.get("limit", 10)), 30)
 
-    villages   = load_json(TROOPS_FILE)
+    villages   = load_troops()
     targets_   = load_json(TARGETS_FILE)
     plan       = load_json(PLAN_FILE)
     player_map = load_json(PLAYER_MAP_FILE)
@@ -330,7 +331,7 @@ def swap_coord():
     new_coord    = data.get("new_coord", "")
     coord_type   = data.get("type", "offs")
 
-    villages = load_json(TROOPS_FILE)
+    villages = load_troops()
     targets_ = load_json(TARGETS_FILE)
     plan     = load_json(PLAN_FILE)
     settings = load_settings()

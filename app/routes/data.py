@@ -10,6 +10,7 @@ from ..storage import (
     TROOPS_FILE,
     VILLAGE_IDS_FILE,
     load_json,
+    load_troops,
     load_settings,
     save_json,
 )
@@ -21,7 +22,7 @@ bp = Blueprint("data", __name__)
 
 @bp.get("/api/troops")
 def get_troops():
-    return jsonify(load_json(TROOPS_FILE))
+    return jsonify(load_troops())
 
 
 @bp.post("/api/troops")

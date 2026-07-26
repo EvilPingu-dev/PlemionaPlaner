@@ -11,6 +11,7 @@ from ..storage import (
     TROOPS_FILE,
     VILLAGE_IDS_FILE,
     load_json,
+    load_troops,
     load_settings,
 )
 
@@ -24,7 +25,7 @@ def get_timeline():
     """Return all planned sends sorted by send time for timeline view."""
     plan       = load_json(PLAN_FILE)
     settings   = load_settings()
-    villages_d = load_json(TROOPS_FILE)
+    villages_d = load_troops()
     player_map = load_json(PLAYER_MAP_FILE)
 
     if not isinstance(plan, dict) or not plan.get("assignments"):

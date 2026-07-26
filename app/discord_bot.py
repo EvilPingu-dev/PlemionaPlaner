@@ -8,7 +8,7 @@ from datetime import datetime, timedelta, timezone
 
 import discord
 
-from .storage import DATA_DIR, PLAN_FILE, TROOPS_FILE, PLAYER_MAP_FILE, load_json, load_settings
+from .storage import DATA_DIR, PLAN_FILE, TROOPS_FILE, PLAYER_MAP_FILE, load_json, load_settings, load_troops
 
 log = logging.getLogger(__name__)
 
@@ -32,7 +32,7 @@ def _build_send_schedule() -> list[dict]:
     """Return list of {player, send_dt(datetime), coord, target, type} sorted by send_dt."""
     plan     = load_json(PLAN_FILE)
     settings = load_settings()
-    villages = load_json(TROOPS_FILE) or []
+    villages = load_troops() or []
     pm_list  = load_json(PLAYER_MAP_FILE) or []
 
     if not isinstance(plan, dict) or not plan.get("assignments"):

@@ -13,6 +13,7 @@ from ..storage import (
     TROOPS_FILE,
     VILLAGE_IDS_FILE,
     load_json,
+    load_troops,
     load_settings,
     save_json,
 )
@@ -76,7 +77,7 @@ def auto_fetch_player_map():
     if not server:
         return jsonify({"error": "Ustaw numer serwera w zakładce ⚙ Ustawienia."}), 400
 
-    villages = load_json(TROOPS_FILE)
+    villages = load_troops()
     if not villages:
         return jsonify({"error": "Importuj wojska najpierw (zakładka 🪖 Wojska)."}), 400
 

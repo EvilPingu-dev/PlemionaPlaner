@@ -14,6 +14,7 @@ from ..storage import (
     TROOPS_FILE,
     VILLAGE_IDS_FILE,
     load_json,
+    load_troops,
     load_settings,
 )
 
@@ -26,7 +27,7 @@ bp = Blueprint("export", __name__)
 def export_csv():
     plan       = load_json(PLAN_FILE)
     settings   = load_settings()
-    villages_d = load_json(TROOPS_FILE)
+    villages_d = load_troops()
     player_map = load_json(PLAYER_MAP_FILE)
 
     if not isinstance(plan, dict) or not plan.get("assignments"):
@@ -90,7 +91,7 @@ def export_forum_players():
     """Generate per-player forum BBCode (each player sees only their sends)."""
     plan       = load_json(PLAN_FILE)
     settings   = load_settings()
-    villages_d = load_json(TROOPS_FILE)
+    villages_d = load_troops()
     player_map = load_json(PLAYER_MAP_FILE)
     id_map     = load_json(VILLAGE_IDS_FILE) or {}
 
