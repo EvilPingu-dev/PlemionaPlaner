@@ -34,15 +34,16 @@ app = create_app(
 
 if __name__ == "__main__":
     frozen = getattr(sys, "frozen", False)          # True when built with PyInstaller
+    dev    = not frozen and os.environ.get("PLANER_DEV") == "1"
     port   = _find_free_port(5000)
     url    = f"http://127.0.0.1:{port}"
 
-    if frozen:
-        # Open browser after a short delay so Flask is ready
+    if dev:
+        # Explicit dev mode (PLANER_DEV=1) — hot reload, no auto-browser
+        app.run(host="127.0.0.1", port=port, debug=True)
+    else:
+        # Normal launch (start.bat or frozen) — no debug noise, auto-browser
         threading.Timer(1.2, lambda: webbrowser.open(url)).start()
         print(f"Planer Akcji uruchomiony → {url}")
         print("Zamknij to okno aby zatrzymać aplikację.")
         app.run(host="127.0.0.1", port=port, debug=False, use_reloader=False)
-    else:
-        # Dev mode — hot reload, no auto-browser
-        app.run(host="127.0.0.1", port=port, debug=True)
