@@ -333,7 +333,8 @@ def plan_action(
              if v.get("cats", 0) > 0
              and v["coord"] not in skip
              and v["coord"] not in used_off_coords
-             and v["coord"] not in used_burst_coords],
+             and v["coord"] not in used_burst_coords
+             and not (block_night_sends and is_night_send(_dist(v["x"], v["y"], cx, cy), ram_speed, arrival_datetime))],
             key=lambda v: _dist(v["x"], v["y"], cx, cy),
         )
         chosen = cat_cands[:needed]
@@ -370,7 +371,8 @@ def plan_action(
              if v["coord"] not in skip
              and v["coord"] not in used_off_coords
              and v["coord"] not in used_burst_coords
-             and v["coord"] not in used_fake_coords],
+             and v["coord"] not in used_fake_coords
+             and not (block_night_sends and is_night_send(_dist(v["x"], v["y"], cx, cy), off_speed, arrival_datetime))],
             key=lambda v: _dist(v["x"], v["y"], cx, cy),
         )
         chosen_fo = fake_pool[:fakes_needed]
@@ -378,7 +380,9 @@ def plan_action(
 
         # Fake nobles: remaining noble pool not consumed by real targets
         fn_sorted = sorted(
-            [nv for nv in remaining_nobles if nv["coord"] not in skip],
+            [nv for nv in remaining_nobles
+             if nv["coord"] not in skip
+             and not (block_night_sends and is_night_send(_dist(nv["x"], nv["y"], cx, cy), noble_speed, arrival_datetime))],
             key=lambda nv: _dist(nv["x"], nv["y"], cx, cy),
         )
         chosen_fn = fn_sorted[:fn_needed]
