@@ -181,7 +181,7 @@ function _renderAssignments(assignments, editMode) {
                     ${addOffInput}
                 </div>
                 <div class="assign-group">
-                    <label>Szlachcice ${nobleMissing}
+                    <label>Szlachcice ${nobleMissing} <button class="btn btn-sm promote-to-off-btn" data-aidx="${aIdx}" data-target="${a.target}" data-mode="noble" title="Przenieś szlachcica z fejków">+</button>
                         ${a.nobles.length > 1 ? `<button class="btn btn-sm stack-nobles-btn" data-aidx="${aIdx}" data-target="${a.target}" title="Wyślij wszystkie szlachcice z jednej wioski">⊞ Stack</button>` : ''}
                     </label>
                     <div class="coord-list">${nobleTags || '<span class="missing">brak</span>'}</div>
@@ -311,11 +311,14 @@ function _renderAssignments(assignments, editMode) {
         });
     });
 
-    // ── Promote village from fejki/burzaki to offs ───────────────────────
+    // ── Promote village from fejki/burzaki to offs or nobles ─────────────
     document.querySelectorAll('.promote-to-off-btn').forEach(btn => {
         btn.addEventListener('click', e => {
             e.stopPropagation();
-            _promoteToOff(parseInt(btn.dataset.aidx), btn.dataset.target);
+            if (btn.dataset.mode === 'noble')
+                _promoteNoble(parseInt(btn.dataset.aidx), btn.dataset.target);
+            else
+                _promoteToOff(parseInt(btn.dataset.aidx), btn.dataset.target);
         });
     });
 
@@ -368,13 +371,16 @@ function _renderBurstAssignments(burstAssignments) {
         }).join('');
         const building = a.building ? ` <span class="dim">→ ${a.building}</span>` : '';
         return `<div class="assign-block">
-            <div class="assign-header"><span class="assign-target">💥 ${a.target}${building}</span>${badge}</div>
+            <div class="assign-header"><span class="assign-target">&#x1F4A5; ${a.target}${building}</span>${badge} <button class="btn btn-sm promote-target-btn" data-target="${a.target}" data-source="burst" title="Utwórz cel szlachciców z tego celu">&#x2795; Szlachcice</button></div>
             <div class="assign-body"><div class="assign-group">
                 <label>Katapulty</label>
                 <div class="coord-list">${tags || '<span class="missing">brak</span>'}</div>
             </div></div>
         </div>`;
     }).join('');
+    el.querySelectorAll('.promote-target-btn').forEach(btn => {
+        btn.addEventListener('click', () => _promoteTargetToNobles(btn.dataset.target, btn.dataset.source));
+    });
 }
 
 function _renderFakeAssignments(fakeAssignments) {
@@ -397,18 +403,74 @@ function _renderFakeAssignments(fakeAssignments) {
         const foTags = (a.fake_offs_detail   || a.fake_offs.map(c        => ({coord:c,dist:null}))).map(d => makeTag(d, offSpeed)).join('');
         const fnTags = (a.fake_nobles_detail || a.fake_nobles_list.map(c => ({coord:c,dist:null}))).map(d => makeTag(d, nobleSpeed)).join('');
         return `<div class="assign-block">
-            <div class="assign-header"><span class="assign-target">🎭 ${a.target}</span>${badgeFo} ${badgeFn}</div>
+            <div class="assign-header"><span class="assign-target">&#x1F3AD; ${a.target}</span>${badgeFo} ${badgeFn} <button class="btn btn-sm promote-target-btn" data-target="${a.target}" data-source="fake" title="Utwórz cel szlachciców z tego celu">&#x2795; Szlachcice</button></div>
             <div class="assign-body">
                 <div class="assign-group"><label>Fejki offowe</label><div class="coord-list">${foTags || '<span class="missing">brak</span>'}</div></div>
                 <div class="assign-group"><label>Fejki szlachcicowe</label><div class="coord-list">${fnTags || '<span class="missing">brak</span>'}</div></div>
             </div>
         </div>`;
     }).join('');
+    el.querySelectorAll('.promote-target-btn').forEach(btn => {
+        btn.addEventListener('click', () => _promoteTargetToNobles(btn.dataset.target, btn.dataset.source));
+    });
 }
 
 function calcSendStr(arrivalIso, travelMinutes) {
     const d  = new Date(new Date(arrivalIso).getTime() - travelMinutes * 60000);
     return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}`;
+}
+
+function _promoteTargetToNobles(targetCoord, source) {
+    if (source === 'fake') {
+        const idx = _currentFakeAssignments.findIndex(fa => fa.target === targetCoord);
+        if (idx !== -1) _currentFakeAssignments.splice(idx, 1);
+    } else {
+        const idx = _currentBurstAssignments.findIndex(ba => ba.target === targetCoord);
+        if (idx !== -1) _currentBurstAssignments.splice(idx, 1);
+    }
+    _currentAssignments.push({
+        target: targetCoord,
+        offs_needed: 0, nobles_needed: 1,
+        offs: [], offs_detail: [],
+        nobles: [], nobles_detail: [],
+        offs_missing: 0, nobles_missing: 1,
+        arrival_dt: null, noble_arrival_dt: null,
+    });
+    _renderAssignments(_currentAssignments, _planEditMode);
+    _renderBurstAssignments(_currentBurstAssignments);
+    _renderFakeAssignments(_currentFakeAssignments);
+    _saveCurrentPlan();
+}
+
+function _promoteNoble(aIdx, targetCoord) {
+    let coord = null;
+    for (const fa of _currentFakeAssignments) {
+        if (fa.target === targetCoord && fa.fake_nobles_list.length > 0) {
+            coord = fa.fake_nobles_list.shift();
+            if (fa.fake_nobles_detail) fa.fake_nobles_detail.shift();
+            fa.fake_nobles = Math.max(0, fa.fake_nobles - 1);
+            break;
+        }
+    }
+    if (!coord) {
+        for (const fa of _currentFakeAssignments) {
+            if (fa.fake_nobles_list.length > 0) {
+                coord = fa.fake_nobles_list.shift();
+                if (fa.fake_nobles_detail) fa.fake_nobles_detail.shift();
+                fa.fake_nobles = Math.max(0, fa.fake_nobles - 1);
+                break;
+            }
+        }
+    }
+    if (!coord) { alert('Brak wolnych szlachcic\u00f3w w fejkach.'); return; }
+    const a = _currentAssignments[aIdx];
+    a.nobles.push(coord);
+    a.nobles_detail = a.nobles_detail || [];
+    a.nobles_detail.push({ coord, dist: null, is_night: false });
+    a.nobles_missing = Math.max(0, (a.nobles_needed || 0) - a.nobles.length);
+    _renderAssignments(_currentAssignments, _planEditMode);
+    _renderFakeAssignments(_currentFakeAssignments);
+    _saveCurrentPlan();
 }
 
 function _promoteToOff(aIdx, targetCoord) {
