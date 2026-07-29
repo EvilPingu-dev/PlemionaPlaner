@@ -235,6 +235,74 @@ def reload_coord():
     return jsonify({"assignments": assignments})
 
 
+@bp.post("/api/plan/add-noble")
+def add_noble():
+    """Find the next best available noble village for a target and append it."""
+    data         = request.json or {}
+    target_coord = data.get("target_coord", "")
+    blacklisted  = set(data.get("blacklisted", []))
+
+    villages   = load_troops()
+    plan       = load_json(PLAN_FILE)
+    player_map = load_json(PLAYER_MAP_FILE)
+    settings   = load_settings()
+
+    if not isinstance(plan, dict):
+        return jsonify({"error": "Brak planu."}), 400
+
+    assignments = plan.get("assignments", [])
+    a_idx = next((i for i, a in enumerate(assignments) if a["target"] == target_coord), None)
+    if a_idx is None:
+        return jsonify({"error": "Cel nie znaleziony."}), 400
+
+    disabled: set[str] = set()
+    for pm in player_map:
+        if not pm.get("enabled", True):
+            disabled.update(pm.get("villages", []))
+
+    used: set[str] = set()
+    for a in assignments:
+        for c in a.get("offs", []):
+            used.add(c)
+        for c in a.get("nobles", []):
+            used.add(c)
+
+    skip = used | blacklisted | disabled
+
+    tx_str, ty_str = target_coord.split("|")
+    tx, ty = int(tx_str), int(ty_str)
+    noble_speed = float(settings.get("noble_speed", 35))
+
+    arrival_raw = settings.get("arrival_datetime", "")
+    arrival_dt: datetime | None = None
+    if arrival_raw:
+        try:
+            arrival_dt = datetime.fromisoformat(arrival_raw)
+        except ValueError:
+            pass
+
+    candidates = [v for v in villages if v.get("nobles", 0) > 0 and v["coord"] not in skip]
+    if not candidates:
+        return jsonify({"error": "Brak dostępnych szlachciców."}), 400
+
+    candidates.sort(key=lambda v: (
+        int(is_night_send(_dist(v["x"], v["y"], tx, ty), noble_speed, arrival_dt)),
+        _dist(v["x"], v["y"], tx, ty),
+    ))
+    new_v  = candidates[0]
+    dist   = round(_dist(new_v["x"], new_v["y"], tx, ty), 1)
+    is_ngt = is_night_send(dist, noble_speed, arrival_dt)
+
+    a = assignments[a_idx]
+    a.setdefault("nobles", []).append(new_v["coord"])
+    a.setdefault("nobles_detail", []).append({"coord": new_v["coord"], "dist": dist, "is_night": is_ngt})
+    a["nobles_needed"]  = max(a.get("nobles_needed", 0), len(a["nobles"]))
+    a["nobles_missing"] = max(0, a["nobles_needed"] - len(a["nobles"]))
+
+    save_json(PLAN_FILE, plan)
+    return jsonify({"assignments": assignments})
+
+
 @bp.post("/api/plan/candidates")
 def get_candidates():
     """Return up to N best available villages for a given coord slot."""

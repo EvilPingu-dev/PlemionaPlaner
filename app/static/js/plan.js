@@ -442,35 +442,17 @@ function _promoteTargetToNobles(targetCoord, source) {
     _saveCurrentPlan();
 }
 
-function _promoteNoble(aIdx, targetCoord) {
-    let coord = null;
-    for (const fa of _currentFakeAssignments) {
-        if (fa.target === targetCoord && fa.fake_nobles_list.length > 0) {
-            coord = fa.fake_nobles_list.shift();
-            if (fa.fake_nobles_detail) fa.fake_nobles_detail.shift();
-            fa.fake_nobles = Math.max(0, fa.fake_nobles - 1);
-            break;
-        }
-    }
-    if (!coord) {
-        for (const fa of _currentFakeAssignments) {
-            if (fa.fake_nobles_list.length > 0) {
-                coord = fa.fake_nobles_list.shift();
-                if (fa.fake_nobles_detail) fa.fake_nobles_detail.shift();
-                fa.fake_nobles = Math.max(0, fa.fake_nobles - 1);
-                break;
-            }
-        }
-    }
-    if (!coord) { alert('Brak wolnych szlachcic\u00f3w w fejkach.'); return; }
-    const a = _currentAssignments[aIdx];
-    a.nobles.push(coord);
-    a.nobles_detail = a.nobles_detail || [];
-    a.nobles_detail.push({ coord, dist: null, is_night: false });
-    a.nobles_missing = Math.max(0, (a.nobles_needed || 0) - a.nobles.length);
-    _renderAssignments(_currentAssignments, _planEditMode);
-    _renderFakeAssignments(_currentFakeAssignments);
-    _saveCurrentPlan();
+async function _promoteNoble(aIdx, targetCoord) {
+    try {
+        const res  = await fetch('/api/plan/add-noble', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ target_coord: targetCoord, blacklisted: [] }),
+        });
+        const data = await res.json();
+        if (!res.ok) { alert(data.error || 'Brak dost\u0119pnych szlachcic\u00f3w.'); return; }
+        _currentAssignments = data.assignments;
+        _renderAssignments(_currentAssignments, _planEditMode);
+    } catch { alert('B\u0142\u0105d po\u0142\u0105czenia.'); }
 }
 
 function _promoteToOff(aIdx, targetCoord) {
