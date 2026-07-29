@@ -363,6 +363,44 @@ def plan_action(
         })
 
     # ── Fejki (fake attacks, after burzaki) ───────────────────────────────
+
+    # Collect all existing send times per player to avoid send-time conflicts in fejki
+    _player_send_times: dict[str, list[datetime]] = {}
+    for _a in assignments:
+        _raw = _a.get("arrival_dt")
+        if not _raw:
+            continue
+        _arr = datetime.fromisoformat(_raw)
+        for _od in _a.get("offs_detail", []):
+            _pl = c2p.get(_od["coord"])
+            if _pl:
+                _player_send_times.setdefault(_pl, []).append(
+                    _arr - timedelta(minutes=_od["dist"] * _od.get("speed", off_speed)))
+        _raw_n = _a.get("noble_arrival_dt") or _raw
+        _narr  = datetime.fromisoformat(_raw_n)
+        for _nd in _a.get("nobles_detail", []):
+            _pl = c2p.get(_nd["coord"])
+            if _pl:
+                _player_send_times.setdefault(_pl, []).append(
+                    _narr - timedelta(minutes=_nd["dist"] * noble_speed))
+    for _ba in burst_assignments:
+        _raw = _ba.get("arrival_dt")
+        if not _raw:
+            continue
+        _arr = datetime.fromisoformat(_raw)
+        for _cd in _ba.get("catapults_detail", []):
+            _pl = c2p.get(_cd["coord"])
+            if _pl:
+                _player_send_times.setdefault(_pl, []).append(
+                    _arr - timedelta(minutes=_cd["dist"] * ram_speed))
+
+    def _no_send_conflict(coord: str, send_dt: datetime) -> bool:
+        pl = c2p.get(coord)
+        if not pl:
+            return True
+        return all(abs((send_dt - e).total_seconds()) >= 30
+                   for e in _player_send_times.get(pl, []))
+
     fake_assignments: list[dict] = []
     used_fake_coords: set[str] = set()
     remaining_nobles = [nv for i, nv in enumerate(noble_pool) if i not in used_noble_indices]
@@ -373,30 +411,46 @@ def plan_action(
         fn_needed     = ft.get("fake_nobles", 0)
         ft_arrival    = random.choice(_slot_dts) if _slot_dts else arrival_datetime
 
-        # Fake offs: unused villages (not real offs / burzaks / already used as fakes)
+        # Fake offs: unused villages, no night send, no send-time conflict
         fake_pool = sorted(
             [v for v in villages
              if v["coord"] not in skip
              and v["coord"] not in used_off_coords
              and v["coord"] not in used_burst_coords
              and v["coord"] not in used_fake_coords
-             and not (block_night_sends and is_night_send(_dist(v["x"], v["y"], cx, cy), off_speed, ft_arrival))],
+             and not (block_night_sends and is_night_send(_dist(v["x"], v["y"], cx, cy), off_speed, ft_arrival))
+             and (ft_arrival is None or _no_send_conflict(
+                 v["coord"],
+                 ft_arrival - timedelta(minutes=_dist(v["x"], v["y"], cx, cy) * off_speed)))],
             key=lambda v: _dist(v["x"], v["y"], cx, cy),
         )
         chosen_fo = fake_pool[:fakes_needed]
         used_fake_coords.update(v["coord"] for v in chosen_fo)
+        # Register their send times
+        for v in chosen_fo:
+            pl = c2p.get(v["coord"])
+            if pl and ft_arrival:
+                sd = ft_arrival - timedelta(minutes=_dist(v["x"], v["y"], cx, cy) * off_speed)
+                _player_send_times.setdefault(pl, []).append(sd)
 
-        # Fake nobles: remaining noble pool not consumed by real targets
+        # Fake nobles: remaining noble pool, no night send, no send-time conflict
         fn_sorted = sorted(
             [nv for nv in remaining_nobles
              if nv["coord"] not in skip
-             and not (block_night_sends and is_night_send(_dist(nv["x"], nv["y"], cx, cy), noble_speed, ft_arrival))],
+             and not (block_night_sends and is_night_send(_dist(nv["x"], nv["y"], cx, cy), noble_speed, ft_arrival))
+             and (ft_arrival is None or _no_send_conflict(
+                 nv["coord"],
+                 ft_arrival - timedelta(minutes=_dist(nv["x"], nv["y"], cx, cy) * noble_speed)))],
             key=lambda nv: _dist(nv["x"], nv["y"], cx, cy),
         )
         chosen_fn = fn_sorted[:fn_needed]
         for nv in chosen_fn:
             if nv in remaining_nobles:
                 remaining_nobles.remove(nv)
+            pl = c2p.get(nv["coord"])
+            if pl and ft_arrival:
+                sd = ft_arrival - timedelta(minutes=_dist(nv["x"], nv["y"], cx, cy) * noble_speed)
+                _player_send_times.setdefault(pl, []).append(sd)
 
         fo_detail = [
             {"coord": v["coord"],
@@ -424,3 +478,4 @@ def plan_action(
         })
 
     return assignments, burst_assignments, fake_assignments, summary
+
