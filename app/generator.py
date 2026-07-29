@@ -256,14 +256,17 @@ def generate_messages(
         cx, cy = map(int, tcoord.split('|'))
         t_id   = id_map.get(tcoord)
 
-        def _add_fake(coord, atype, speed, _cx=cx, _cy=cy, _tcoord=tcoord, _t_id=t_id):
+        def _add_fake(coord, atype, speed, _cx=cx, _cy=cy, _tcoord=tcoord, _t_id=t_id,
+                      _arrival_dt=arrival_dt_default):
             v = village_by_coord.get(coord)
             if not v:
                 return
             player     = player_by_village.get(coord, "Nieprzypisany")
             d          = euclidean(v["x"], v["y"], _cx, _cy)
             travel_min = d * speed
-            send_dt    = arrival_dt - timedelta(minutes=travel_min)
+            if _arrival_dt is None:
+                return
+            send_dt    = _arrival_dt - timedelta(minutes=travel_min)
             from_id    = id_map.get(coord)
             link       = _attack_link(server, from_id, _t_id, f"Wyślij {atype}")
             player_attacks.setdefault(player, []).append({
@@ -275,7 +278,7 @@ def generate_messages(
                 "burzenie":     "-",
                 "send_dt":      send_dt.isoformat(),
                 "send_str":     _fmt_window(send_dt, window_min),
-                "arrival_str":  arrival_str,
+                "arrival_str":  _fmt_window(_arrival_dt, window_min),
                 "distance":     round(d, 2),
                 "travel_min":   round(travel_min, 1),
                 "attack_link":  link,
