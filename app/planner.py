@@ -1,4 +1,5 @@
 import math
+import random
 from datetime import datetime, timedelta
 
 # Night window: no sends between 23:30 and 07:30
@@ -321,6 +322,10 @@ def plan_action(
     }
 
     # ── Burzaki (catapult attacks, after noble plan) ───────────────────────
+    _slot_dts = list((arrival_slots or {}).values()) if arrival_slots else []
+    if not _slot_dts and arrival_datetime:
+        _slot_dts = [arrival_datetime]
+
     burst_assignments: list[dict] = []
     used_burst_coords: set[str] = set()
     for bt in (burst_targets or []):
@@ -328,13 +333,14 @@ def plan_action(
         needed   = bt.get("attacks", 0)
         building = bt.get("building", "")
         btype    = bt.get("building_type", "")
+        bt_arrival = random.choice(_slot_dts) if _slot_dts else arrival_datetime
         cat_cands = sorted(
             [v for v in villages
              if v.get("cats", 0) > 0
              and v["coord"] not in skip
              and v["coord"] not in used_off_coords
              and v["coord"] not in used_burst_coords
-             and not (block_night_sends and is_night_send(_dist(v["x"], v["y"], cx, cy), ram_speed, arrival_datetime))],
+             and not (block_night_sends and is_night_send(_dist(v["x"], v["y"], cx, cy), ram_speed, bt_arrival))],
             key=lambda v: _dist(v["x"], v["y"], cx, cy),
         )
         chosen = cat_cands[:needed]
@@ -342,7 +348,7 @@ def plan_action(
         detail = [
             {"coord": v["coord"],
              "dist": round(_dist(v["x"], v["y"], cx, cy), 1),
-             "is_night": is_night_send(_dist(v["x"], v["y"], cx, cy), off_speed, arrival_datetime)}
+             "is_night": is_night_send(_dist(v["x"], v["y"], cx, cy), ram_speed, bt_arrival)}
             for v in chosen
         ]
         burst_assignments.append({
@@ -350,6 +356,7 @@ def plan_action(
             "attacks":           needed,
             "building":          building,
             "building_type":     btype,
+            "arrival_dt":        bt_arrival.isoformat() if bt_arrival else None,
             "catapults":         [d["coord"] for d in detail],
             "catapults_detail":  detail,
             "catapults_missing": needed - len(chosen),
@@ -364,6 +371,7 @@ def plan_action(
         cx, cy        = map(int, ft["coord"].split('|'))
         fakes_needed  = ft.get("fakes", 0)
         fn_needed     = ft.get("fake_nobles", 0)
+        ft_arrival    = random.choice(_slot_dts) if _slot_dts else arrival_datetime
 
         # Fake offs: unused villages (not real offs / burzaks / already used as fakes)
         fake_pool = sorted(
@@ -372,7 +380,7 @@ def plan_action(
              and v["coord"] not in used_off_coords
              and v["coord"] not in used_burst_coords
              and v["coord"] not in used_fake_coords
-             and not (block_night_sends and is_night_send(_dist(v["x"], v["y"], cx, cy), off_speed, arrival_datetime))],
+             and not (block_night_sends and is_night_send(_dist(v["x"], v["y"], cx, cy), off_speed, ft_arrival))],
             key=lambda v: _dist(v["x"], v["y"], cx, cy),
         )
         chosen_fo = fake_pool[:fakes_needed]
@@ -382,7 +390,7 @@ def plan_action(
         fn_sorted = sorted(
             [nv for nv in remaining_nobles
              if nv["coord"] not in skip
-             and not (block_night_sends and is_night_send(_dist(nv["x"], nv["y"], cx, cy), noble_speed, arrival_datetime))],
+             and not (block_night_sends and is_night_send(_dist(nv["x"], nv["y"], cx, cy), noble_speed, ft_arrival))],
             key=lambda nv: _dist(nv["x"], nv["y"], cx, cy),
         )
         chosen_fn = fn_sorted[:fn_needed]
@@ -393,19 +401,20 @@ def plan_action(
         fo_detail = [
             {"coord": v["coord"],
              "dist": round(_dist(v["x"], v["y"], cx, cy), 1),
-             "is_night": is_night_send(_dist(v["x"], v["y"], cx, cy), off_speed, arrival_datetime)}
+             "is_night": is_night_send(_dist(v["x"], v["y"], cx, cy), off_speed, ft_arrival)}
             for v in chosen_fo
         ]
         fn_detail = [
             {"coord": nv["coord"],
              "dist": round(_dist(nv["x"], nv["y"], cx, cy), 1),
-             "is_night": is_night_send(_dist(nv["x"], nv["y"], cx, cy), noble_speed, arrival_datetime)}
+             "is_night": is_night_send(_dist(nv["x"], nv["y"], cx, cy), noble_speed, ft_arrival)}
             for nv in chosen_fn
         ]
         fake_assignments.append({
             "target":               ft["coord"],
             "fakes":                fakes_needed,
             "fake_nobles":          fn_needed,
+            "arrival_dt":           ft_arrival.isoformat() if ft_arrival else None,
             "fake_offs":            [d["coord"] for d in fo_detail],
             "fake_offs_detail":     fo_detail,
             "fake_nobles_list":     [d["coord"] for d in fn_detail],

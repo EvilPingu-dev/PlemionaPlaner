@@ -213,9 +213,12 @@ def generate_messages(
         building         = asgn.get("building", "") or "dowolny"
         atype            = f"BURZAK ({building})"
 
+        _raw_adt = asgn.get("arrival_dt")
+        _burst_arrival = datetime.fromisoformat(_raw_adt) if _raw_adt else arrival_dt_default
+
         def _add_burst(coord, _cx=cx, _cy=cy, _tcoord=tcoord, _t_id=t_id,
                        _atype=atype, _building=building,
-                       _arrival_dt=arrival_dt_default):
+                       _arrival_dt=_burst_arrival):
             if _arrival_dt is None:
                 return
             v = village_by_coord.get(coord)
@@ -256,8 +259,11 @@ def generate_messages(
         cx, cy = map(int, tcoord.split('|'))
         t_id   = id_map.get(tcoord)
 
+        _raw_fadt = asgn.get("arrival_dt")
+        _fake_arrival = datetime.fromisoformat(_raw_fadt) if _raw_fadt else arrival_dt_default
+
         def _add_fake(coord, atype, speed, _cx=cx, _cy=cy, _tcoord=tcoord, _t_id=t_id,
-                      _arrival_dt=arrival_dt_default):
+                      _arrival_dt=_fake_arrival):
             v = village_by_coord.get(coord)
             if not v:
                 return
