@@ -312,13 +312,15 @@ def plan_action(
 
     # Summary counts available villages (excluding disabled)
     available_villages = [v for v in villages if v["coord"] not in skip]
+    _offs_avail = len([v for v in available_villages if v["off"] > 0])
     summary = {
-        "offs_available":   len([v for v in available_villages if v["off"] > 0]),
+        "offs_available":   _offs_avail,
         "offs_total":       sum(v["off"]    for v in available_villages),
         "nobles_available": sum(v["nobles"] for v in available_villages),
         "cats_available":   sum(v["cats"]   for v in available_villages),
         "offs_assigned":    len(used_off_coords),
         "nobles_assigned":  noble_assigned_count,
+        "offs_free":        _offs_avail - len(used_off_coords),
     }
 
     # ── Burzaki (catapult attacks, after noble plan) ───────────────────────

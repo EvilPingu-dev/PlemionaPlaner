@@ -64,7 +64,8 @@ function renderPlan({ summary, assignments, burst_assignments, fake_assignments 
         summaryItem(summary.nobles_available, 'Szlachcice dostępni')     +
         summaryItem(summary.cats_available,   'Katapulty')               +
         summaryItem(summary.offs_assigned,    'Offów przydzielono')      +
-        summaryItem(summary.nobles_assigned,  'Szlachciców przydzielono');
+        summaryItem(summary.nobles_assigned,  'Szlachciców przydzielono') +
+        summaryItem(summary.offs_free ?? (summary.offs_available - summary.offs_assigned), 'Wolne wioski off');
 
     _renderAssignments(assignments, false);
     _renderBurstAssignments(burst_assignments || []);
