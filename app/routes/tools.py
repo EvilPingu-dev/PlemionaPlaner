@@ -86,14 +86,22 @@ def get_timeline():
             _add_send(coord, noble_speed, "SZLACHCIC", noble_dt, tcoord)
 
     for asgn in burst_assignments:
-        tcoord = asgn["target"]
+        tcoord  = asgn["target"]
+        raw_adt = asgn.get("arrival_dt")
+        if not raw_adt:
+            continue
+        arr_dt = datetime.fromisoformat(raw_adt)
         for coord in asgn.get("catapults", []):
-            _add_send(coord, 30.0, "BURZAK", datetime.now(), tcoord)
+            _add_send(coord, 30.0, "BURZAK", arr_dt, tcoord)
 
     for asgn in fake_assignments:
-        tcoord = asgn["target"]
+        tcoord  = asgn["target"]
+        raw_adt = asgn.get("arrival_dt")
+        if not raw_adt:
+            continue
+        arr_dt = datetime.fromisoformat(raw_adt)
         for coord in asgn.get("fake_offs", []):
-            _add_send(coord, off_speed, "FEJK", datetime.now(), tcoord)
+            _add_send(coord, off_speed, "FEJK", arr_dt, tcoord)
 
     sends.sort(key=lambda s: s["send_dt"])
 
