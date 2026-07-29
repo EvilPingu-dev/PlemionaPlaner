@@ -420,14 +420,13 @@ function calcSendStr(arrivalIso, travelMinutes) {
     return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}`;
 }
 
-function _promoteTargetToNobles(targetCoord, source) {
-    if (source === 'fake') {
-        const idx = _currentFakeAssignments.findIndex(fa => fa.target === targetCoord);
-        if (idx !== -1) _currentFakeAssignments.splice(idx, 1);
-    } else {
-        const idx = _currentBurstAssignments.findIndex(ba => ba.target === targetCoord);
-        if (idx !== -1) _currentBurstAssignments.splice(idx, 1);
-    }
+async function _promoteTargetToNobles(targetCoord, source) {
+    // Remove from BOTH lists — once it becomes a real target it leaves both
+    const fIdx = _currentFakeAssignments.findIndex(fa => fa.target === targetCoord);
+    if (fIdx !== -1) _currentFakeAssignments.splice(fIdx, 1);
+    const bIdx = _currentBurstAssignments.findIndex(ba => ba.target === targetCoord);
+    if (bIdx !== -1) _currentBurstAssignments.splice(bIdx, 1);
+
     _currentAssignments.push({
         target: targetCoord,
         offs_needed: 0, nobles_needed: 1,
@@ -436,10 +435,23 @@ function _promoteTargetToNobles(targetCoord, source) {
         offs_missing: 0, nobles_missing: 1,
         arrival_dt: null, noble_arrival_dt: null,
     });
-    _renderAssignments(_currentAssignments, _planEditMode);
+
+    // Save to server so add-noble can find the new assignment
+    await _saveCurrentPlan();
     _renderBurstAssignments(_currentBurstAssignments);
     _renderFakeAssignments(_currentFakeAssignments);
-    _saveCurrentPlan();
+
+    // Autofill noble
+    try {
+        const res  = await fetch('/api/plan/add-noble', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ target_coord: targetCoord, blacklisted: [] }),
+        });
+        const data = await res.json();
+        if (res.ok) _currentAssignments = data.assignments;
+    } catch {}
+
+    _renderAssignments(_currentAssignments, _planEditMode);
 }
 
 async function _promoteNoble(aIdx, targetCoord) {
