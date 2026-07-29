@@ -168,10 +168,12 @@ def coverage_post():
             idx = _occ[f"{coord}:OFF"]
             if status_map.get(_status_id(coord, tcoord, "OFF", idx)) == "missed":
                 d = next((d.get("dist") for d in (asgn.get("offs_detail") or []) if d["coord"] == coord), None)
+                ov = village_by_coord.get(coord, {})
                 missed_attacks.append({
                     "coord": coord, "target": tcoord, "type": "OFF",
                     "dist": d, "player": player_by_coord.get(coord, ""),
                     "speed": off_speed, "tx": tx, "ty": ty,
+                    "ox": ov.get("x", tx), "oy": ov.get("y", ty),
                 })
 
         for coord in asgn.get("nobles", []):
@@ -180,9 +182,11 @@ def coverage_post():
             idx = _occ[f"{coord}:SZLACHCIC"]
             if status_map.get(_status_id(coord, tcoord, "SZLACHCIC", idx)) == "missed":
                 d = next((d.get("dist") for d in (asgn.get("nobles_detail") or []) if d["coord"] == coord), None)
+                ov = village_by_coord.get(coord, {})
                 missed_attacks.append({
                     "coord": coord, "target": tcoord, "type": "SZLACHCIC",
                     "dist": d, "player": player_by_coord.get(coord, ""),
+                    "ox": ov.get("x", tx), "oy": ov.get("y", ty),
                     "speed": noble_speed, "tx": tx, "ty": ty,
                 })
 
@@ -219,10 +223,11 @@ def coverage_post():
 
         for ma in attacks:
             pool_set = free_nobles_set if ma["type"] == "SZLACHCIC" else free_offs_set
-            # pick 3 nearest from still-available pool
+            # pick 3 nearest to the original village (= similar travel time to target)
+            ox, oy = ma.get("ox", tx), ma.get("oy", ty)
             candidates = sorted(
                 (village_by_c[c] for c in pool_set if c in village_by_c),
-                key=lambda v: _dist(v["x"], v["y"], tx, ty)
+                key=lambda v: _dist(v["x"], v["y"], ox, oy)
             )[:3]
 
             player_tag = f"[player]{ma['player']}[/player]" if ma["player"] else "?"
