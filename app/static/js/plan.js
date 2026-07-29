@@ -1,7 +1,9 @@
 /* ── ROZPISKI ───────────────────────────────────────────────────────────── */
 
 let _settings           = {};
-let _currentAssignments = [];
+let _currentAssignments      = [];
+let _currentBurstAssignments = [];
+let _currentFakeAssignments  = [];
 let _planEditMode       = false;
 let _blacklist          = {}; // { targetCoord: { offs: Set, nobles: Set } }
 let _candidatesPopup    = null;
@@ -52,7 +54,9 @@ async function runPlan() {
 }
 
 function renderPlan({ summary, assignments, burst_assignments, fake_assignments }) {
-    _currentAssignments = JSON.parse(JSON.stringify(assignments));
+    _currentAssignments      = JSON.parse(JSON.stringify(assignments));
+    _currentBurstAssignments = JSON.parse(JSON.stringify(burst_assignments || []));
+    _currentFakeAssignments  = JSON.parse(JSON.stringify(fake_assignments  || []));
     _planEditMode = false;
     hide('btn-save-plan-edits');
     hide('btn-cancel-plan-edits');
@@ -172,7 +176,7 @@ function _renderAssignments(assignments, editMode) {
             </div>
             <div class="assign-body">
                 <div class="assign-group">
-                    <label>Offowe wioski ${offMissing}</label>
+                    <label>Offowe wioski ${offMissing} <button class="btn btn-sm promote-to-off-btn" data-aidx="${aIdx}" data-target="${a.target}" title="Przenieś wioskę z fejków/burzaków do offów">+</button></label>
                     <div class="coord-list">${offTags || '<span class="missing">brak</span>'}</div>
                     ${addOffInput}
                 </div>
@@ -307,6 +311,14 @@ function _renderAssignments(assignments, editMode) {
         });
     });
 
+    // ── Promote village from fejki/burzaki to offs ───────────────────────
+    document.querySelectorAll('.promote-to-off-btn').forEach(btn => {
+        btn.addEventListener('click', e => {
+            e.stopPropagation();
+            _promoteToOff(parseInt(btn.dataset.aidx), btn.dataset.target);
+        });
+    });
+
     // ── Stack nobles popup ─────────────────────────────────────────────────
     document.querySelectorAll('.stack-nobles-btn').forEach(btn => {
         btn.addEventListener('click', e => {
@@ -397,6 +409,55 @@ function _renderFakeAssignments(fakeAssignments) {
 function calcSendStr(arrivalIso, travelMinutes) {
     const d  = new Date(new Date(arrivalIso).getTime() - travelMinutes * 60000);
     return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}`;
+}
+
+function _promoteToOff(aIdx, targetCoord) {
+    let coord = null;
+
+    // 1. Prefer fake_offs going to the same target coord
+    for (const fa of _currentFakeAssignments) {
+        if (fa.target === targetCoord && fa.fake_offs.length > 0) {
+            coord = fa.fake_offs.shift();
+            if (fa.fake_offs_detail) fa.fake_offs_detail.shift();
+            fa.fakes = Math.max(0, fa.fakes - 1);
+            break;
+        }
+    }
+    // 2. Any fake_offs
+    if (!coord) {
+        for (const fa of _currentFakeAssignments) {
+            if (fa.fake_offs.length > 0) {
+                coord = fa.fake_offs.shift();
+                if (fa.fake_offs_detail) fa.fake_offs_detail.shift();
+                fa.fakes = Math.max(0, fa.fakes - 1);
+                break;
+            }
+        }
+    }
+    // 3. Catapult as fallback
+    if (!coord) {
+        for (const ba of _currentBurstAssignments) {
+            if (ba.catapults.length > 0) {
+                coord = ba.catapults.shift();
+                if (ba.catapults_detail) ba.catapults_detail.shift();
+                ba.attacks = Math.max(0, ba.attacks - 1);
+                break;
+            }
+        }
+    }
+
+    if (!coord) { alert('Brak wolnych wiosek w fejkach/burzakach.'); return; }
+
+    const a = _currentAssignments[aIdx];
+    a.offs.push(coord);
+    a.offs_detail = a.offs_detail || [];
+    a.offs_detail.push({ coord, dist: null, speed: null, is_night: false });
+    a.offs_missing = Math.max(0, (a.offs_needed || 0) - a.offs.length);
+
+    _renderAssignments(_currentAssignments, _planEditMode);
+    _renderBurstAssignments(_currentBurstAssignments);
+    _renderFakeAssignments(_currentFakeAssignments);
+    _saveCurrentPlan();
 }
 
 /** Add `deltaMs` to a local-time ISO string and return a local-time ISO string.
