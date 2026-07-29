@@ -413,13 +413,14 @@ def plan_action(
         fn_needed     = ft.get("fake_nobles", 0)
         ft_arrival    = random.choice(_slot_dts) if _slot_dts else arrival_datetime
 
-        # Fake offs: unused villages, no night send, no send-time conflict
+        # Fake offs: unused villages with rams or cats, no night send, no send-time conflict
         fake_pool = sorted(
             [v for v in villages
              if v["coord"] not in skip
              and v["coord"] not in used_off_coords
              and v["coord"] not in used_burst_coords
              and v["coord"] not in used_fake_coords
+             and (v.get("rams", 0) > 0 or v.get("cats", 0) > 0)
              and not (block_night_sends and is_night_send(_dist(v["x"], v["y"], cx, cy), off_speed, ft_arrival))
              and (ft_arrival is None or _no_send_conflict(
                  v["coord"],

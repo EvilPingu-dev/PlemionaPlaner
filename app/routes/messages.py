@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 
 from flask import Blueprint, jsonify, request
 
+from ..fetcher import fetch_village_ids as _fetch_ids
 from ..generator import generate_messages as _gen_messages
 from ..plans import delete_plan, list_plans, load_plan, save_plan
 from ..storage import (
@@ -44,9 +45,27 @@ def generate_messages():
     burst_assignments = override_burst if override_burst is not None else plan.get("burst_assignments", [])
     fake_assignments  = override_fake  if override_fake  is not None else plan.get("fake_assignments", [])
 
+    # Auto-fetch village IDs for any target coords not yet in village_ids.json
+    id_map = load_json(VILLAGE_IDS_FILE) or {}
+    try:
+        all_coords = list({
+            a.get("target", "")
+            for lst in (assignments, burst_assignments, fake_assignments)
+            for a in lst
+            if a.get("target")
+        })
+        missing = [c for c in all_coords if c not in id_map]
+        if missing and settings.get("server"):
+            new_ids = _fetch_ids(settings["server"], missing)
+            if new_ids:
+                id_map.update(new_ids)
+                save_json(VILLAGE_IDS_FILE, id_map)
+    except Exception:
+        pass
+
     msgs = _gen_messages(
         villages, targets, assignments, player_map, settings,
-        village_id_map=load_json(VILLAGE_IDS_FILE) or {},
+        village_id_map=id_map,
         burst_assignments=burst_assignments,
         fake_assignments=fake_assignments,
     )
