@@ -17,6 +17,21 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 function setStatus(el, msg, type = '') {
     el.textContent = msg;
     el.className = 'status-msg ' + type;
+    if (type === 'ok') _showToast(msg);
+}
+
+let _toastTimer = null;
+function _showToast(msg) {
+    let toast = document.getElementById('toast');
+    if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'toast';
+        document.body.appendChild(toast);
+    }
+    toast.textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(_toastTimer);
+    _toastTimer = setTimeout(() => toast.classList.remove('show'), 2500);
 }
 
 function fmt(n) { return Number(n).toLocaleString('pl-PL'); }
