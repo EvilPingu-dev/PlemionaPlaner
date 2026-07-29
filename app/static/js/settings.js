@@ -56,7 +56,7 @@ function applySettings(s) {
     document.getElementById('s-noble-min-dist').value  = s.noble_min_dist    ?? 0;
     document.getElementById('s-max-off-dist').value    = s.max_off_dist      ?? 0;
     document.getElementById('s-min-off-dist').value    = s.min_off_dist      ?? 0;
-    document.getElementById('s-min-off').value         = s.min_off           ?? 0;
+    document.getElementById('s-min-off').value         = s.min_off           ?? 1500;
     document.getElementById('s-block-night').checked   = !!s.block_night_sends;
     document.getElementById('s-fill-free').checked     = !!s.fill_free_villages;
     let slots = s.arrival_slots || [];
