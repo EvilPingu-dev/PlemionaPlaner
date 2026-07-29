@@ -56,6 +56,7 @@ function applySettings(s) {
     document.getElementById('s-noble-min-dist').value  = s.noble_min_dist    ?? 0;
     document.getElementById('s-max-off-dist').value    = s.max_off_dist      ?? 0;
     document.getElementById('s-min-off-dist').value    = s.min_off_dist      ?? 0;
+    document.getElementById('s-min-off').value         = s.min_off           ?? 0;
     document.getElementById('s-block-night').checked   = !!s.block_night_sends;
     document.getElementById('s-fill-free').checked     = !!s.fill_free_villages;
     let slots = s.arrival_slots || [];
@@ -128,6 +129,7 @@ async function saveSettings() {
         noble_min_dist:         parseFloat(document.getElementById('s-noble-min-dist').value) || 0,
         max_off_dist:           parseFloat(document.getElementById('s-max-off-dist').value)   || 0,
         min_off_dist:           parseFloat(document.getElementById('s-min-off-dist').value)   || 0,
+        min_off:                parseInt(document.getElementById('s-min-off').value)           || 0,
         block_night_sends:      document.getElementById('s-block-night').checked,
         fill_free_villages:     document.getElementById('s-fill-free').checked,
     };

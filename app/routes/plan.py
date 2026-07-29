@@ -122,6 +122,7 @@ def run_plan():
         noble_min_dist=float(settings.get("noble_min_dist", 0) or 0),
         max_off_dist=float(settings.get("max_off_dist", 0) or 0),
         min_off_dist=float(settings.get("min_off_dist", 0) or 0),
+        min_off=int(settings.get("min_off", 0) or 0),
         fill_free_villages=bool(settings.get("fill_free_villages", False)),
         fake_targets=fake_targets,
         burst_targets=burst_targets,

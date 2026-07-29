@@ -291,7 +291,7 @@ def generate_messages(
 
 
     messages = []
-    subject = f"Cele {action_name} {arrival_dt_fmt}"
+    subject = action_name
 
     # Build lookup: all attacks on each target (across all players)
     all_by_target: dict[str, list] = {}

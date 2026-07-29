@@ -46,6 +46,7 @@ def plan_action(
     noble_min_dist: float = 0.0,
     max_off_dist: float = 0.0,
     min_off_dist: float = 0.0,
+    min_off: int = 0,
     fill_free_villages: bool = False,
     fake_targets: list | None = None,
     burst_targets: list | None = None,
@@ -96,7 +97,8 @@ def plan_action(
     enemy_player_friendly: dict[str, set[str]] = {}
 
     off_pool = sorted(
-        [v for v in villages if v["off"] > 0 and v["coord"] not in skip],
+        [v for v in villages if v["off"] > 0 and v["coord"] not in skip
+         and (min_off <= 0 or v["off"] >= min_off)],
         key=lambda v: -v["off"],
     )
 

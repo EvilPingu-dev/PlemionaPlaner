@@ -39,6 +39,7 @@ DEFAULT_SETTINGS: dict = {
     "noble_min_dist":          0,      # min fields for nobles (0 = no minimum)
     "max_off_dist":            0,      # max fields for offs   (0 = unlimited)
     "min_off_dist":            0,      # min fields for offs   (0 = no minimum)
+    "min_off":                 0,      # minimum OFF troops required to use a village
     "fill_free_villages":      False,  # fill missing offs from unassigned villages
     "greeting": (
         "Witam,\n"
