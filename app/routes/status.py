@@ -149,6 +149,7 @@ def coverage_post():
     noble_speed = float(settings.get("noble_speed", 35))
     action_name = settings.get("action_name", "Akcja")
     server      = settings.get("server", "")
+    min_off     = int(settings.get("min_off", 0))
 
     player_by_coord: dict[str, str] = {}
     for pm in player_map:
@@ -200,8 +201,15 @@ def coverage_post():
 
     # Separate pools — coords will be removed as they get assigned
     excluded = set(load_json(EXCLUDED_REPLACEMENTS_FILE) or [])
-    free_offs_set   = {v["coord"] for v in villages_d if v["off"]    > 0 and v["coord"] not in all_assigned_coords and v["coord"] not in excluded}
-    free_nobles_set = {v["coord"] for v in villages_d if v["nobles"] > 0 and v["coord"] not in all_assigned_coords and v["coord"] not in excluded}
+    disabled_coords: set[str] = {
+        coord.strip()
+        for pm in player_map
+        if not pm.get("enabled", True)
+        for coord in pm.get("villages", [])
+    }
+    _skip = all_assigned_coords | excluded | disabled_coords
+    free_offs_set   = {v["coord"] for v in villages_d if v["off"]    >= max(min_off, 1) and v["coord"] not in _skip}
+    free_nobles_set = {v["coord"] for v in villages_d if v["nobles"] > 0               and v["coord"] not in _skip}
     village_by_c    = {v["coord"]: v for v in villages_d}
 
     # Group missed attacks by target so we know how many each target needs
@@ -282,11 +290,15 @@ def attack_pool():
     assignments = body.get("assignments") or (plan.get("assignments", []) if isinstance(plan, dict) else [])
     excluded    = set(load_json(EXCLUDED_REPLACEMENTS_FILE) or [])
     server      = settings.get("server", "")
+    min_off     = int(settings.get("min_off", 0))
 
     player_by_coord: dict[str, str] = {}
+    disabled_coords: set[str] = set()
     for pm in player_map:
         for coord in pm.get("villages", []):
             player_by_coord[coord.strip()] = pm["player"]
+            if not pm.get("enabled", True):
+                disabled_coords.add(coord.strip())
 
     village_by_coord = {v["coord"]: v for v in villages_d}
     all_assigned:   set[str] = set()
@@ -331,10 +343,11 @@ def attack_pool():
                     "arrival_dt": noble_arrival_dt or arrival_dt,
                 })
 
+    _skip       = all_assigned | excluded | disabled_coords
     free_offs   = {v["coord"]: v for v in villages_d
-                   if v["off"]    > 0 and v["coord"] not in all_assigned and v["coord"] not in excluded}
+                   if v["off"]    >= max(min_off, 1) and v["coord"] not in _skip}
     free_nobles = {v["coord"]: v for v in villages_d
-                   if v["nobles"] > 0 and v["coord"] not in all_assigned and v["coord"] not in excluded}
+                   if v["nobles"] > 0               and v["coord"] not in _skip}
 
     result = []
     for ma in missed_attacks:

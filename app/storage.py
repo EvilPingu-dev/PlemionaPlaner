@@ -81,16 +81,19 @@ def load_settings() -> dict:
 
 
 def load_troops() -> list:
-    """Load troops from disk and recalculate 'off' using the current OFF_KEYS.
+    """Load troops from disk and recalculate 'off' using the current OFF formula.
 
     This ensures old imports (made before OFF_KEYS changed) produce correct
     off scores without requiring a re-import.
     """
-    from .parser import OFF_KEYS, FARM_SPACE
+    from .parser import OFF_KEYS, FARM_SPACE, CAT_KEY
     villages = load_json(TROOPS_FILE)
     if not isinstance(villages, list):
         return []
     for v in villages:
         troops = v.get("troops", {})
-        v["off"] = sum(troops.get(k, 0) * FARM_SPACE.get(k, 1) for k in OFF_KEYS)
+        primary = sum(troops.get(k, 0) * FARM_SPACE.get(k, 1) for k in OFF_KEYS)
+        # cats only count when the village is offensive (same rule as parse_troops)
+        cats_bonus = troops.get(CAT_KEY, 0) * FARM_SPACE[CAT_KEY] if primary > 0 else 0
+        v["off"] = primary + cats_bonus
     return villages

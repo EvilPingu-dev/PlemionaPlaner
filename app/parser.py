@@ -21,7 +21,7 @@ TROOP_COLS = [
     "outside",    # Poza wioską
 ]
 
-OFF_KEYS  = {"axe", "light"}
+OFF_KEYS  = {"axe", "light", "mtd_archer", "ram"}  # primary off units
 NOBLE_KEY = "noble"
 CAT_KEY   = "cat"
 RAM_KEY   = "ram"
@@ -83,8 +83,10 @@ def parse_troops(raw: str) -> list[dict]:
             except (ValueError, IndexError):
                 troops[key] = 0
 
-        # OFF = farm-space weighted sum of offensive unit types
+        # OFF = primary off units + cats only when village is offensive (not pure deff)
         off = sum(troops.get(k, 0) * FARM_SPACE.get(k, 1) for k in OFF_KEYS)
+        if off > 0:
+            off += troops.get(CAT_KEY, 0) * FARM_SPACE[CAT_KEY]
 
         villages.append(
             {
