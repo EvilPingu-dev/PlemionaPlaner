@@ -1,6 +1,9 @@
 """Routes: attack status tracker (sent / missed / unknown per attack)."""
+import copy
+
 from flask import Blueprint, jsonify, request
 
+from ..generator import generate_messages as _gen_messages
 from ..planner import _dist
 from ..storage import (
     ATTACK_STATUS_FILE,
@@ -8,6 +11,7 @@ from ..storage import (
     EXCLUDED_REPLACEMENTS_FILE,
     PLAN_FILE,
     PLAYER_MAP_FILE,
+    TARGETS_FILE,
     TROOPS_FILE,
     VILLAGE_IDS_FILE,
     load_json,
@@ -260,3 +264,175 @@ def coverage_post():
         parts.append("")
 
     return jsonify({"bbcode": "\n".join(parts), "missed_count": len(missed_attacks)})
+
+
+# ── Interactive pool ──────────────────────────────────────────────────────────
+
+@bp.post("/api/attack-status/pool")
+def attack_pool():
+    """Return up to 10 nearest free village candidates for every missed attack."""
+    plan       = load_json(PLAN_FILE)
+    settings   = load_settings()
+    villages_d = load_troops()
+    player_map = load_json(PLAYER_MAP_FILE)
+    status_map = load_json(ATTACK_STATUS_FILE) or {}
+    id_map     = load_json(VILLAGE_IDS_FILE) or {}
+
+    body        = request.get_json(silent=True) or {}
+    assignments = body.get("assignments") or (plan.get("assignments", []) if isinstance(plan, dict) else [])
+    excluded    = set(load_json(EXCLUDED_REPLACEMENTS_FILE) or [])
+    server      = settings.get("server", "")
+
+    player_by_coord: dict[str, str] = {}
+    for pm in player_map:
+        for coord in pm.get("villages", []):
+            player_by_coord[coord.strip()] = pm["player"]
+
+    village_by_coord = {v["coord"]: v for v in villages_d}
+    all_assigned:   set[str] = set()
+    missed_attacks: list[dict] = []
+
+    for asgn in assignments:
+        tcoord = asgn.get("target", "")
+        if not tcoord:
+            continue
+        tx, ty           = map(int, tcoord.split("|"))
+        arrival_dt       = asgn.get("arrival_dt", "")
+        noble_arrival_dt = asgn.get("noble_arrival_dt", arrival_dt)
+        _occ: dict[str, int] = {}
+
+        for coord in asgn.get("offs", []):
+            all_assigned.add(coord)
+            _occ[f"{coord}:OFF"] = _occ.get(f"{coord}:OFF", -1) + 1
+            idx = _occ[f"{coord}:OFF"]
+            sid = _status_id(coord, tcoord, "OFF", idx)
+            if status_map.get(sid) == "missed":
+                ov = village_by_coord.get(coord, {})
+                missed_attacks.append({
+                    "id": sid, "coord": coord, "target": tcoord, "type": "OFF",
+                    "player": player_by_coord.get(coord, ""),
+                    "tx": tx, "ty": ty,
+                    "ox": ov.get("x", tx), "oy": ov.get("y", ty),
+                    "arrival_dt": arrival_dt,
+                })
+
+        for coord in asgn.get("nobles", []):
+            all_assigned.add(coord)
+            _occ[f"{coord}:SZLACHCIC"] = _occ.get(f"{coord}:SZLACHCIC", -1) + 1
+            idx = _occ[f"{coord}:SZLACHCIC"]
+            sid = _status_id(coord, tcoord, "SZLACHCIC", idx)
+            if status_map.get(sid) == "missed":
+                ov = village_by_coord.get(coord, {})
+                missed_attacks.append({
+                    "id": sid, "coord": coord, "target": tcoord, "type": "SZLACHCIC",
+                    "player": player_by_coord.get(coord, ""),
+                    "tx": tx, "ty": ty,
+                    "ox": ov.get("x", tx), "oy": ov.get("y", ty),
+                    "arrival_dt": noble_arrival_dt or arrival_dt,
+                })
+
+    free_offs   = {v["coord"]: v for v in villages_d
+                   if v["off"]    > 0 and v["coord"] not in all_assigned and v["coord"] not in excluded}
+    free_nobles = {v["coord"]: v for v in villages_d
+                   if v["nobles"] > 0 and v["coord"] not in all_assigned and v["coord"] not in excluded}
+
+    result = []
+    for ma in missed_attacks:
+        pool = free_nobles if ma["type"] == "SZLACHCIC" else free_offs
+        ox, oy = ma.get("ox", ma["tx"]), ma.get("oy", ma["ty"])
+        candidates = sorted(pool.values(), key=lambda v: _dist(v["x"], v["y"], ox, oy))[:10]
+        result.append({
+            "id":         ma["id"],
+            "coord":      ma["coord"],
+            "target":     ma["target"],
+            "type":       ma["type"],
+            "player":     ma["player"],
+            "arrival_dt": ma["arrival_dt"],
+            "candidates": [
+                {
+                    "coord":     v["coord"],
+                    "player":    player_by_coord.get(v["coord"], ""),
+                    "off":       v["off"],
+                    "nobles":    v.get("nobles", 0),
+                    "dist":      round(_dist(v["x"], v["y"], ma["tx"], ma["ty"]), 1),
+                    "from_id":   id_map.get(v["coord"]),
+                    "target_id": id_map.get(ma["target"]),
+                }
+                for v in candidates
+            ],
+        })
+
+    return jsonify({"missed_attacks": result, "server": server})
+
+
+@bp.post("/api/attack-status/replacement-message")
+def replacement_message():
+    """
+    Generate the full BBCode message for a picked replacement village.
+    Includes all existing sends for that player + the new replacement send.
+    """
+    body              = request.get_json(silent=True) or {}
+    replacement_coord = body.get("replacement_coord", "").strip()
+    missed_target     = body.get("target", "").strip()
+    missed_type       = body.get("type", "OFF").strip()
+    arrival_dt        = body.get("arrival_dt", "")
+    assignments_in    = body.get("assignments")
+
+    if not replacement_coord or not missed_target:
+        return jsonify({"error": "Brak danych."}), 400
+
+    plan       = load_json(PLAN_FILE)
+    settings   = load_settings()
+    villages_d = load_troops()
+    targets    = load_json(TARGETS_FILE)
+    player_map = load_json(PLAYER_MAP_FILE)
+    id_map     = load_json(VILLAGE_IDS_FILE) or {}
+
+    base_asgn = assignments_in if assignments_in is not None else (
+        plan.get("assignments", []) if isinstance(plan, dict) else []
+    )
+
+    player_by_coord: dict[str, str] = {}
+    for pm in player_map:
+        for coord in pm.get("villages", []):
+            player_by_coord[coord.strip()] = pm["player"]
+
+    replacement_player = player_by_coord.get(replacement_coord, "")
+
+    modified = copy.deepcopy(base_asgn)
+
+    # Add the replacement village to the existing assignment for that target
+    target_asgn = next((a for a in modified if a.get("target") == missed_target), None)
+    if target_asgn is None:
+        target_asgn = {
+            "target": missed_target,
+            "offs": [], "nobles": [],
+            "arrival_dt": arrival_dt,
+            "noble_arrival_dt": arrival_dt,
+        }
+        modified.append(target_asgn)
+
+    if missed_type == "SZLACHCIC":
+        target_asgn.setdefault("nobles", []).append(replacement_coord)
+        if arrival_dt and not target_asgn.get("noble_arrival_dt"):
+            target_asgn["noble_arrival_dt"] = arrival_dt
+    else:
+        target_asgn.setdefault("offs", []).append(replacement_coord)
+        if arrival_dt and not target_asgn.get("arrival_dt"):
+            target_asgn["arrival_dt"] = arrival_dt
+
+    msgs = _gen_messages(
+        villages_d, targets, modified, player_map, settings,
+        village_id_map=id_map,
+    )
+
+    msg = next((m for m in msgs if m["player"] == replacement_player), None)
+    if not msg:
+        return jsonify({"error": f"Brak wiadomości dla gracza '{replacement_player}'."}), 404
+
+    return jsonify({
+        "player":    replacement_player,
+        "message":   msg["message"],
+        "mail_link": msg.get("mail_link", ""),
+        "attacks":   msg.get("attacks", []),
+    })

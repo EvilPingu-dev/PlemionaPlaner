@@ -7,6 +7,8 @@ let _statusPlan   = [];   // current assignments snapshot
 let _statusPollId = null; // setInterval handle for live polling
 let _villageIds   = {};   // { coord: gameId }
 let _cancelledTargets = new Set(); // coords of cancelled targets
+let _poolData   = {};   // { attackId: poolEntry } fetched from /api/attack-status/pool
+let _poolServer = '';   // server string for game links in pool UI
 
 const STATUS_POLL_MS = 30_000; // refresh every 30 s
 
@@ -138,15 +140,15 @@ function _renderStatusList() {
         const tcoord = asgn.target;
         if (!byTarget[tcoord]) byTarget[tcoord] = [];
         const countPerCoord = {};
-        const addRow = (coord, type) => {
+        const addRow = (coord, type, arrivalDt) => {
             const key = `${coord}:${type}`;
             const idx = (countPerCoord[key] = (countPerCoord[key] ?? -1) + 1);
             const player = _playerByCoord[coord] || '?';
             const id = _statusId(coord, tcoord, type, idx);
-            byTarget[tcoord].push({ id, coord, tcoord, type, player, st: _statusMap[id] || 'unknown' });
+            byTarget[tcoord].push({ id, coord, tcoord, type, player, st: _statusMap[id] || 'unknown', arrivalDt: arrivalDt || '' });
         };
-        for (const c of (asgn.offs || []))   addRow(c, 'OFF');
-        for (const c of (asgn.nobles || [])) addRow(c, 'SZLACHCIC');
+        for (const c of (asgn.offs || []))   addRow(c, 'OFF', asgn.arrival_dt);
+        for (const c of (asgn.nobles || [])) addRow(c, 'SZLACHCIC', asgn.noble_arrival_dt || asgn.arrival_dt);
     }
 
     const targetOrder = Object.keys(byTarget).sort();
@@ -157,6 +159,9 @@ function _renderStatusList() {
         const server = (_settings && _settings.server) ? _settings.server : '';
         const gameLink = (fromId && tgtId && server)
             ? ` <a href="https://pl${server}.plemiona.pl/game.php?village=${fromId}&screen=place&target=${tgtId}" target="_blank" title="Wyślij w grze" style="font-size:.8rem;opacity:.55;text-decoration:none">🔗</a>`
+            : '';
+        const poolBtn = r.st === 'missed'
+            ? `<button class="btn btn-sm pool-pick-btn" data-sid="${escHtml(r.id)}" title="Pokaż dostępną pulę zastępców" style="margin-left:.4rem">🔄 Pula</button>`
             : '';
         return `
         <tr class="status-row" data-sid="${escHtml(r.id)}" data-status="${r.st}">
@@ -169,6 +174,7 @@ function _renderStatusList() {
                 <button class="st-btn ${r.st === 'missed'  ? 'active' : ''}" data-sid="${escHtml(r.id)}" data-st="missed"  title="Nie wysłana">❌</button>
                 <button class="st-btn ${r.st === 'unknown' ? 'active' : ''}" data-sid="${escHtml(r.id)}" data-st="unknown" title="Nieznany">❓</button>
             </td>
+            <td>${poolBtn}</td>
         </tr>`;
     };
 
@@ -176,7 +182,7 @@ function _renderStatusList() {
         if (!rows.length) return `<div style="color:#555;font-size:.85rem;padding:.4rem 0">${title}: brak</div>`;
         return `<div style="color:${color};font-weight:600;font-size:.85rem;margin-bottom:.3rem">${title}</div>
             <div class="table-wrap"><table>
-                <thead><tr><th></th><th>Z wioski</th><th>Typ</th><th>Gracz</th><th>Status</th></tr></thead>
+                <thead><tr><th></th><th>Z wioski</th><th>Typ</th><th>Gracz</th><th>Status</th><th></th></tr></thead>
                 <tbody>${rows.map(makeRow).join('')}</tbody>
             </table></div>`;
     };
@@ -261,7 +267,151 @@ function _renderStatusList() {
         });
     });
 
+    // Wire pool-pick buttons (missed attacks → show replacement pool)
+    container.querySelectorAll('.pool-pick-btn').forEach(btn => {
+        btn.addEventListener('click', () => _togglePoolExpansion(btn.dataset.sid));
+    });
+
     _updateCoverage();
+}
+
+async function _fetchPoolData() {
+    try {
+        const payload = _currentAssignments.length ? { assignments: _currentAssignments } : {};
+        const res = await fetch('/api/attack-status/pool', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+        if (!res.ok) return;
+        _poolData   = {};
+        _poolServer = data.server || '';
+        for (const ma of (data.missed_attacks || [])) {
+            _poolData[ma.id] = ma;
+        }
+    } catch {}
+}
+
+function _togglePoolExpansion(sid) {
+    const row = document.querySelector(`.status-row[data-sid="${CSS.escape(sid)}"]`);
+    if (!row) return;
+    const next = row.nextElementSibling;
+    if (next && next.classList.contains('pool-expand-row')) {
+        next.remove();
+        return;
+    }
+    const ma = _poolData[sid];
+    if (!ma) {
+        // Data not yet loaded – show placeholder then fill in
+        const tr = document.createElement('tr');
+        tr.className = 'pool-expand-row';
+        tr.innerHTML = `<td colspan="6" style="padding:.4rem .8rem;color:#888"><em>Pobieranie puli…</em></td>`;
+        row.after(tr);
+        _fetchPoolData().then(() => {
+            tr.remove();
+            const ma2 = _poolData[sid];
+            if (ma2) _insertPoolRow(row, ma2);
+        });
+        return;
+    }
+    _insertPoolRow(row, ma);
+}
+
+function _insertPoolRow(afterRow, ma) {
+    const server     = _poolServer || (_settings && _settings.server) || '';
+    const candidates = ma.candidates || [];
+    const tr         = document.createElement('tr');
+    tr.className = 'pool-expand-row';
+
+    if (!candidates.length) {
+        tr.innerHTML = `<td colspan="6" style="padding:.4rem .8rem;color:#e06060;font-style:italic">Brak wolnych wiosek w puli.</td>`;
+        afterRow.after(tr);
+        return;
+    }
+
+    const rows = candidates.map(c => {
+        const gameLink = (c.from_id && c.target_id && server)
+            ? `<a href="https://pl${server}.plemiona.pl/game.php?village=${escHtml(c.from_id)}&screen=place&target=${escHtml(c.target_id)}" target="_blank" style="font-size:.75rem;opacity:.6;margin-left:.3rem">🔗</a>`
+            : '';
+        const resource = ma.type === 'SZLACHCIC'
+            ? `🏛 ${c.nobles} szlach.`
+            : `⚔ ${c.off.toLocaleString()} OFF`;
+        return `<tr class="pool-candidate-row">
+            <td style="padding:.25rem .4rem"><code>${escHtml(c.coord)}</code>${gameLink}</td>
+            <td style="padding:.25rem .4rem;color:#aaa;font-size:.82rem">${escHtml(c.player)}</td>
+            <td style="padding:.25rem .4rem;color:#888;font-size:.8rem">${resource}</td>
+            <td style="padding:.25rem .4rem;color:#888;font-size:.8rem">${c.dist} pol</td>
+            <td style="padding:.25rem .4rem">
+                <button class="btn btn-sm btn-success candidate-pick-btn"
+                    data-coord="${escHtml(c.coord)}"
+                    data-target="${escHtml(ma.target)}"
+                    data-type="${escHtml(ma.type)}"
+                    data-arrival-dt="${escHtml(ma.arrival_dt || '')}">Wybierz</button>
+            </td>
+        </tr>`;
+    }).join('');
+
+    tr.innerHTML = `<td colspan="6" style="padding:.4rem .6rem;background:rgba(0,0,0,.25)">
+        <div style="font-size:.78rem;color:#aaa;margin-bottom:.3rem;font-weight:600">
+            Dostępna pula – ${candidates.length} wiosek (typ: ${escHtml(ma.type)}):
+        </div>
+        <table style="width:100%;font-size:.82rem;border-collapse:collapse">
+            <thead><tr>
+                <th style="text-align:left;padding:.2rem .4rem;color:#666">Wioska</th>
+                <th style="text-align:left;padding:.2rem .4rem;color:#666">Gracz</th>
+                <th style="text-align:left;padding:.2rem .4rem;color:#666">Siły</th>
+                <th style="text-align:left;padding:.2rem .4rem;color:#666">Odległość</th>
+                <th></th>
+            </tr></thead>
+            <tbody>${rows}</tbody>
+        </table>
+    </td>`;
+    afterRow.after(tr);
+
+    tr.querySelectorAll('.candidate-pick-btn').forEach(btn => {
+        btn.addEventListener('click', () =>
+            _pickReplacement(btn.dataset.coord, btn.dataset.target, btn.dataset.type, btn.dataset.arrivalDt)
+        );
+    });
+}
+
+async function _pickReplacement(coord, target, type, arrivalDt) {
+    const modal    = document.getElementById('replacement-msg-modal');
+    const playerEl = document.getElementById('replacement-msg-player');
+    const bbcodeEl = document.getElementById('replacement-msg-bbcode');
+    const mailBtn  = document.getElementById('btn-replacement-msg-mail');
+
+    playerEl.textContent = '…';
+    bbcodeEl.value = '';
+    mailBtn.style.display = 'none';
+    show('replacement-msg-modal');
+
+    try {
+        const payload = { replacement_coord: coord, target, type, arrival_dt: arrivalDt };
+        if (_currentAssignments.length) payload.assignments = _currentAssignments;
+        const res  = await fetch('/api/attack-status/replacement-message', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+            playerEl.textContent = 'Błąd';
+            bbcodeEl.value = data.error || 'Nieznany błąd';
+            return;
+        }
+        playerEl.textContent = data.player;
+        bbcodeEl.value       = data.message;
+        if (data.mail_link) {
+            mailBtn.dataset.link    = data.mail_link;
+            mailBtn.dataset.message = data.message;
+            mailBtn.style.display   = '';
+        }
+    } catch (err) {
+        playerEl.textContent = 'Błąd';
+        bbcodeEl.value = err.message;
+    }
 }
 
 function _updateCoverage() {
@@ -269,6 +419,7 @@ function _updateCoverage() {
     if (missedCount > 0) {
         show('coverage-card');
         _generateCoveragePost();
+        _fetchPoolData();
     } else {
         hide('coverage-card');
     }
@@ -367,5 +518,28 @@ document.getElementById('btn-copy-cancelled').addEventListener('click', () => {
 document.querySelectorAll('.tab-btn[data-tab="status"]').forEach(btn => {
     btn.addEventListener('click', () => {
         if (!_statusPlan.length) loadAttackStatus();
+    });
+});
+
+// ── Replacement message modal ─────────────────────────────────────────────────
+document.getElementById('btn-close-replacement-modal').addEventListener('click', () => hide('replacement-msg-modal'));
+document.getElementById('replacement-msg-modal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) hide('replacement-msg-modal');
+});
+document.getElementById('btn-copy-replacement-msg').addEventListener('click', () => {
+    const text = document.getElementById('replacement-msg-bbcode').value;
+    navigator.clipboard.writeText(text).then(() => {
+        const btn = document.getElementById('btn-copy-replacement-msg');
+        const orig = btn.textContent;
+        btn.textContent = '✓ Skopiowano!';
+        setTimeout(() => btn.textContent = orig, 2000);
+    });
+});
+document.getElementById('btn-replacement-msg-mail').addEventListener('click', function () {
+    window.open(this.dataset.link, '_blank', 'noopener');
+    navigator.clipboard.writeText(this.dataset.message || '').then(() => {
+        const orig = this.textContent;
+        this.textContent = '✓ Skopiowano treść!';
+        setTimeout(() => this.textContent = orig, 3000);
     });
 });
