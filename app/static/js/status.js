@@ -381,10 +381,18 @@ async function _pickReplacement(coord, target, type, arrivalDt) {
     const playerEl = document.getElementById('replacement-msg-player');
     const bbcodeEl = document.getElementById('replacement-msg-bbcode');
     const mailBtn  = document.getElementById('btn-replacement-msg-mail');
+    const saveBtn  = document.getElementById('btn-save-replacement-to-plan');
 
     playerEl.textContent = '…';
     bbcodeEl.value = '';
     mailBtn.style.display = 'none';
+    saveBtn.style.display = 'none';
+    // store context on button for the save handler
+    saveBtn.dataset.coord     = coord;
+    saveBtn.dataset.target    = target;
+    saveBtn.dataset.type      = type;
+    saveBtn.dataset.arrivalDt = arrivalDt || '';
+    saveBtn.dataset.saved     = '';
     show('replacement-msg-modal');
 
     try {
@@ -408,6 +416,7 @@ async function _pickReplacement(coord, target, type, arrivalDt) {
             mailBtn.dataset.message = data.message;
             mailBtn.style.display   = '';
         }
+        saveBtn.style.display = '';
     } catch (err) {
         playerEl.textContent = 'Błąd';
         bbcodeEl.value = err.message;
@@ -542,4 +551,32 @@ document.getElementById('btn-replacement-msg-mail').addEventListener('click', fu
         this.textContent = '✓ Skopiowano treść!';
         setTimeout(() => this.textContent = orig, 3000);
     });
+});
+document.getElementById('btn-save-replacement-to-plan').addEventListener('click', async function () {
+    if (this.dataset.saved) return;
+    const payload = {
+        replacement_coord: this.dataset.coord,
+        target:            this.dataset.target,
+        type:              this.dataset.type,
+        arrival_dt:        this.dataset.arrivalDt || '',
+    };
+    try {
+        const res = await fetch('/api/attack-status/save-replacement', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+        if (res.ok) {
+            this.textContent = '✓ Zapisano!';
+            this.disabled    = true;
+            this.dataset.saved = '1';
+            // Reload the status tracker so the new send appears
+            await loadAttackStatus();
+        } else {
+            this.textContent = data.error || 'Błąd zapisu';
+        }
+    } catch {
+        this.textContent = 'Błąd połączenia';
+    }
 });

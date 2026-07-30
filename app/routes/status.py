@@ -449,3 +449,47 @@ def replacement_message():
         "mail_link": msg.get("mail_link", ""),
         "attacks":   msg.get("attacks", []),
     })
+
+
+@bp.post("/api/attack-status/save-replacement")
+def save_replacement():
+    """
+    Append a replacement coord to plan.json non-destructively.
+    The original missed coord stays; the replacement is added as an extra send.
+    """
+    body              = request.get_json(silent=True) or {}
+    replacement_coord = body.get("replacement_coord", "").strip()
+    missed_target     = body.get("target", "").strip()
+    missed_type       = body.get("type", "OFF").strip()
+    arrival_dt        = body.get("arrival_dt", "")
+
+    if not replacement_coord or not missed_target:
+        return jsonify({"error": "Brak danych."}), 400
+
+    plan = load_json(PLAN_FILE)
+    if not isinstance(plan, dict):
+        return jsonify({"error": "Brak planu."}), 400
+
+    assignments = plan.get("assignments", [])
+    target_asgn = next((a for a in assignments if a.get("target") == missed_target), None)
+    if target_asgn is None:
+        target_asgn = {
+            "target": missed_target,
+            "offs": [], "nobles": [],
+            "arrival_dt": arrival_dt,
+            "noble_arrival_dt": arrival_dt,
+        }
+        assignments.append(target_asgn)
+        plan["assignments"] = assignments
+
+    if missed_type == "SZLACHCIC":
+        target_asgn.setdefault("nobles", []).append(replacement_coord)
+        if arrival_dt and not target_asgn.get("noble_arrival_dt"):
+            target_asgn["noble_arrival_dt"] = arrival_dt
+    else:
+        target_asgn.setdefault("offs", []).append(replacement_coord)
+        if arrival_dt and not target_asgn.get("arrival_dt"):
+            target_asgn["arrival_dt"] = arrival_dt
+
+    save_json(PLAN_FILE, plan)
+    return jsonify({"ok": True, "target": missed_target, "type": missed_type, "coord": replacement_coord})
