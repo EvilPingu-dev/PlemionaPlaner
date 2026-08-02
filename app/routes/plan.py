@@ -10,9 +10,11 @@ from ..storage import (
     FAKE_TARGETS_FILE,
     PLAN_FILE,
     PLAYER_MAP_FILE,
+    PLAYER_POINTS_FILE,
     SEPARATIONS_FILE,
     SETTINGS_FILE,
     TARGET_OWNERS_FILE,
+    TARGET_POINTS_FILE,
     TARGETS_FILE,
     TROOPS_FILE,
     VILLAGE_IDS_FILE,
@@ -78,15 +80,30 @@ def run_plan():
         arrival_slots[1] = arrival_dt
 
     coord_to_player: dict[str, str] = {}
-    player_points: dict[str, int] = {}
     for pm in player_map:
-        pop_sum = 0
         for coord in pm.get("villages", []):
             coord_to_player[coord.strip()] = pm["player"]
-            v = next((vv for vv in villages if vv["coord"] == coord.strip()), None)
-            if v:
-                pop_sum += v.get("pop", 0)
-        player_points[pm["player"]] = pop_sum
+
+    # Use real TW points from API fetch if available, fall back to pop sum
+    fetched_player_pts = load_json(PLAYER_POINTS_FILE)
+    fetched_target_pts = load_json(TARGET_POINTS_FILE)
+    if isinstance(fetched_player_pts, dict) and fetched_player_pts:
+        player_points = fetched_player_pts
+    else:
+        player_points: dict[str, int] = {}
+        for pm in player_map:
+            pop_sum = 0
+            for coord in pm.get("villages", []):
+                v = next((vv for vv in villages if vv["coord"] == coord.strip()), None)
+                if v:
+                    pop_sum += v.get("pop", 0)
+            player_points[pm["player"]] = pop_sum
+
+    # Auto-fill target points from fetched data when not manually set
+    if isinstance(fetched_target_pts, dict) and fetched_target_pts:
+        for t in targets:
+            if not t.get("points") and t["coord"] in fetched_target_pts:
+                t["points"] = fetched_target_pts[t["coord"]]
 
     conflicts = load_json(CONFLICTS_FILE)
     if not isinstance(conflicts, list):

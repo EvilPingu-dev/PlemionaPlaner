@@ -36,11 +36,21 @@ def fetch_all(server: str, village_coords: list[str], target_coords: list[str]) 
     raw_villages = _fetch(f"{base}/village.txt")
     raw_players  = _fetch(f"{base}/player.txt")
 
-    # id → player name
-    player_names: dict[str, str] = {}
+    # id → player name + points
+    player_names:  dict[str, str] = {}
+    player_pts:    dict[str, int] = {}  # player_name → points
     for line in raw_players.splitlines():
         parts = line.split(",")
-        if len(parts) >= 2:
+        if len(parts) >= 5:
+            pid   = parts[0].strip()
+            name  = urllib.parse.unquote_plus(parts[1].strip())
+            try:
+                pts = int(parts[4].strip())
+            except ValueError:
+                pts = 0
+            player_names[pid] = name
+            player_pts[name]  = pts
+        elif len(parts) >= 2:
             pid  = parts[0].strip()
             name = urllib.parse.unquote_plus(parts[1].strip())
             player_names[pid] = name
@@ -50,6 +60,7 @@ def fetch_all(server: str, village_coords: list[str], target_coords: list[str]) 
     player_villages: dict[str, list[str]] = {}
     village_id_map:  dict[str, str]       = {}
     target_owner_map: dict[str, str]      = {}   # target coord → enemy player name
+    target_points_map: dict[str, int]     = {}   # target coord → village owner's total points
 
     target_set  = set(target_coords)
     village_set = set(village_coords)
@@ -68,9 +79,11 @@ def fetch_all(server: str, village_coords: list[str], target_coords: list[str]) 
         if coord in village_set and pid and pid != "0":
             player_villages.setdefault(pid, []).append(coord)
 
-        # Record enemy owner for target villages
+        # Record enemy owner and their total points for target villages
         if coord in target_set and pid and pid != "0":
-            target_owner_map[coord] = player_names.get(pid, f"Gracz_{pid}")
+            owner_name = player_names.get(pid, f"Gracz_{pid}")
+            target_owner_map[coord] = owner_name
+            target_points_map[coord] = player_pts.get(owner_name, 0)
 
     player_map = sorted(
         [
@@ -80,7 +93,13 @@ def fetch_all(server: str, village_coords: list[str], target_coords: list[str]) 
         key=lambda p: p["player"].casefold(),
     )
 
-    return {"player_map": player_map, "village_id_map": village_id_map, "target_owner_map": target_owner_map}
+    return {
+        "player_map":       player_map,
+        "village_id_map":   village_id_map,
+        "target_owner_map": target_owner_map,
+        "player_points":    player_pts,          # player_name → total TW points
+        "target_points":    target_points_map,   # target_coord → owner's total TW points
+    }
 
 
 # Backwards-compatible wrapper used by existing code

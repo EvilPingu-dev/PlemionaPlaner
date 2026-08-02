@@ -8,8 +8,10 @@ from ..storage import (
     CONFLICTS_FILE,
     FAKE_TARGETS_FILE,
     PLAYER_MAP_FILE,
+    PLAYER_POINTS_FILE,
     SEPARATIONS_FILE,
     TARGET_OWNERS_FILE,
+    TARGET_POINTS_FILE,
     TROOPS_FILE,
     VILLAGE_IDS_FILE,
     load_json,
@@ -102,6 +104,8 @@ def auto_fetch_player_map():
         save_json(PLAYER_MAP_FILE,    new_map)
         save_json(VILLAGE_IDS_FILE,   result["village_id_map"])
         save_json(TARGET_OWNERS_FILE, result.get("target_owner_map", {}))
+        save_json(PLAYER_POINTS_FILE, result.get("player_points", {}))
+        save_json(TARGET_POINTS_FILE, result.get("target_points", {}))
         return jsonify({
             "count":       len(new_map),
             "player_map":  new_map,
