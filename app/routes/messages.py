@@ -111,6 +111,14 @@ def forum_overview():
         send_dt = arrival_dt - timedelta(minutes=dist * speed)
         return send_dt.strftime("%d.%m %H:%M:%S")
 
+    def _arr_str(arr_raw: str | None) -> str:
+        if not arr_raw:
+            return "?"
+        try:
+            return datetime.fromisoformat(arr_raw).strftime("%d.%m %H:%M:%S")
+        except ValueError:
+            return "?"
+
     parts: list[str] = []
 
     header_lines = [f"[b]Akcja: {action_name}[/b]", f"[b]Wejście: {arrival_str}[/b]"]
@@ -130,7 +138,7 @@ def forum_overview():
             f"Szlachcice: {len(a['nobles'])}/{a['nobles_needed']}  "
             f"{status}[/b]"
         )
-        table_header = "[table][**]#[||]Z wioski[||]Gracz[||]Typ[||]Wysyłka[||]Cel[/**]"
+        table_header = "[table][**]#[||]Z wioski[||]Gracz[||]Typ[||]Odl.[||]Wysyłka[||]Wejście[||]Cel[/**]"
         rows: list[str] = []
         row_idx = 1
 
@@ -141,15 +149,17 @@ def forum_overview():
             coord      = d["coord"]
             player_col = f"[player]{player_by_coord[coord]}[/player]" if player_by_coord.get(coord) else "-"
             night      = " 🌙" if d.get("is_night") else ""
+            dist_str   = f"{d['dist']} pol" if d.get('dist') is not None else '-'
             spd        = d.get("speed") or off_speed
-            rows.append(f"[*]{row_idx}[|][coord]{coord}[/coord][|]{player_col}[|][b]OFF[/b][|]{_send_str(coord, d.get('dist'), spd)}{night}[|][coord]{a['target']}[/coord]")
+            rows.append(f"[*]{row_idx}[|][coord]{coord}[/coord][|]{player_col}[|][b]OFF[/b][|]{dist_str}[|]{_send_str(coord, d.get('dist'), spd)}{night}[|]{_arr_str(a.get('arrival_dt'))}[|][coord]{a['target']}[/coord]")
             row_idx += 1
 
         for d in nobles_detail:
             coord      = d["coord"]
             player_col = f"[player]{player_by_coord[coord]}[/player]" if player_by_coord.get(coord) else "-"
             night      = " 🌙" if d.get("is_night") else ""
-            rows.append(f"[*]{row_idx}[|][coord]{coord}[/coord][|]{player_col}[|][color=#3399ff][b]SZLACHCIC[/b][/color][|]{_send_str(coord, d.get('dist'), noble_speed)}{night}[|][coord]{a['target']}[/coord]")
+            dist_str   = f"{d['dist']} pol" if d.get('dist') is not None else '-'
+            rows.append(f"[*]{row_idx}[|][coord]{coord}[/coord][|]{player_col}[|][color=#3399ff][b]SZLACHCIC[/b][/color][|]{dist_str}[|]{_send_str(coord, d.get('dist'), noble_speed)}{night}[|]{_arr_str(a.get('noble_arrival_dt') or a.get('arrival_dt'))}[|][coord]{a['target']}[/coord]")
             row_idx += 1
 
         parts.append(target_header + "\n" + table_header + "\n" + "\n".join(rows) + "\n[/table]")

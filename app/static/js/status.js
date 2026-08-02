@@ -140,15 +140,15 @@ function _renderStatusList() {
         const tcoord = asgn.target;
         if (!byTarget[tcoord]) byTarget[tcoord] = [];
         const countPerCoord = {};
-        const addRow = (coord, type, arrivalDt) => {
+        const addRow = (coord, type, arrivalDt, dist) => {
             const key = `${coord}:${type}`;
             const idx = (countPerCoord[key] = (countPerCoord[key] ?? -1) + 1);
             const player = _playerByCoord[coord] || '?';
             const id = _statusId(coord, tcoord, type, idx);
-            byTarget[tcoord].push({ id, coord, tcoord, type, player, st: _statusMap[id] || 'unknown', arrivalDt: arrivalDt || '' });
+            byTarget[tcoord].push({ id, coord, tcoord, type, player, st: _statusMap[id] || 'unknown', arrivalDt: arrivalDt || '', dist: dist ?? null });
         };
-        for (const c of (asgn.offs || []))   addRow(c, 'OFF', asgn.arrival_dt);
-        for (const c of (asgn.nobles || [])) addRow(c, 'SZLACHCIC', asgn.noble_arrival_dt || asgn.arrival_dt);
+        for (const d of (asgn.offs_detail   || (asgn.offs    || []).map(c => ({coord: c, dist: null})))) addRow(d.coord, 'OFF',        asgn.arrival_dt,                               d.dist);
+        for (const d of (asgn.nobles_detail || (asgn.nobles  || []).map(c => ({coord: c, dist: null})))) addRow(d.coord, 'SZLACHCIC', asgn.noble_arrival_dt || asgn.arrival_dt, d.dist);
     }
 
     // Preserve plan order (same as Forum tab), deduplicated
@@ -171,6 +171,7 @@ function _renderStatusList() {
             <td><code>${r.coord}</code>${gameLink}</td>
             <td style="color:${r.type === 'OFF' ? '#cc8844' : '#4488cc'};font-weight:600">${r.type}</td>
             <td style="color:#aaa;font-size:.85rem">${escHtml(r.player)}</td>
+            <td style="color:#888;font-size:.82rem">${r.dist != null ? `${r.dist} pol` : ''}</td>
             <td>
                 <button class="st-btn ${r.st === 'sent'    ? 'active' : ''}" data-sid="${escHtml(r.id)}" data-st="sent"    title="Wysłana">✅</button>
                 <button class="st-btn ${r.st === 'missed'  ? 'active' : ''}" data-sid="${escHtml(r.id)}" data-st="missed"  title="Nie wysłana">❌</button>
@@ -184,7 +185,7 @@ function _renderStatusList() {
         if (!rows.length) return `<div style="color:#555;font-size:.85rem;padding:.4rem 0">${title}: brak</div>`;
         return `<div style="color:${color};font-weight:600;font-size:.85rem;margin-bottom:.3rem">${title}</div>
             <div class="table-wrap"><table>
-                <thead><tr><th></th><th>Z wioski</th><th>Typ</th><th>Gracz</th><th>Status</th><th></th></tr></thead>
+                <thead><tr><th></th><th>Z wioski</th><th>Typ</th><th>Gracz</th><th>Odl.</th><th>Status</th><th></th></tr></thead>
                 <tbody>${rows.map(makeRow).join('')}</tbody>
             </table></div>`;
     };

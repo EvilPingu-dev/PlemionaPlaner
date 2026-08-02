@@ -173,6 +173,7 @@ function _renderAssignments(assignments, editMode) {
             <div class="assign-header">
                 <span class="assign-target">🎯 ${a.target}</span>
                 ${offBadge} ${nobleBadge}
+                ${editMode ? `<button class="remove-target btn btn-sm" data-aidx="${aIdx}" title="Usuń cel z rozpiski" style="margin-left:auto;color:#e06060">✕ Usuń cel</button>` : ''}
             </div>
             <div class="assign-body">
                 <div class="assign-group">
@@ -198,6 +199,14 @@ function _renderAssignments(assignments, editMode) {
     }).join('');
 
     if (editMode) {
+        document.querySelectorAll('.remove-target').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const aIdx = parseInt(btn.dataset.aidx);
+                _currentAssignments.splice(aIdx, 1);
+                _renderAssignments(_currentAssignments, true);
+                _saveCurrentPlan();
+            });
+        });
         document.querySelectorAll('.remove-coord').forEach(btn => {
             btn.addEventListener('click', () => {
                 const aIdx = parseInt(btn.dataset.aidx);
