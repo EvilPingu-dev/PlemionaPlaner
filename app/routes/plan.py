@@ -335,13 +335,12 @@ def get_candidates():
         if not pm.get("enabled", True):
             disabled.update(pm.get("villages", []))
 
+    # Only block same-type coords; off villages can still be noble candidates and vice-versa.
     used: set[str] = set()
+    same_key = "offs" if coord_type == "offs" else "nobles"
     for i, a in enumerate(assignments):
-        for c in a.get("offs", []):
-            if not (i == a_idx and c == old_coord and coord_type == "offs"):
-                used.add(c)
-        for c in a.get("nobles", []):
-            if not (i == a_idx and c == old_coord and coord_type == "nobles"):
+        for c in a.get(same_key, []):
+            if not (i == a_idx and c == old_coord):
                 used.add(c)
 
     skip = used | blacklisted | disabled
