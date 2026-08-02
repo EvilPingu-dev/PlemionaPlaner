@@ -217,6 +217,7 @@ function _renderAssignments(assignments, editMode) {
                 if (a[key + '_detail']) a[key + '_detail'].splice(cIdx, 1);
                 a[key + '_missing'] = Math.max(0, a[key + '_needed'] - a[key].length);
                 _renderAssignments(_currentAssignments, true);
+                _saveCurrentPlan();
             });
         });
         document.querySelectorAll('.reload-coord').forEach(btn => {
@@ -643,43 +644,46 @@ function showStackNoblesPopup(btn, aIdx, targetCoord) {
     const [tx, ty]   = targetCoord.split('|').map(Number);
     const a          = _currentAssignments[aIdx];
     const needed     = a.nobles_needed || a.nobles.length;
-    const inAssignment = new Set(a.nobles);
 
-    // All villages with nobles, sorted by distance
-    const candidates = (_lastTroops || [])
-        .filter(v => v.nobles > 0)
-        .map(v => {
-            const [vx, vy] = v.coord.split('|').map(Number);
-            const dist = Math.round(Math.sqrt((vx - tx) ** 2 + (vy - ty) ** 2) * 10) / 10;
-            return { coord: v.coord, nobles: v.nobles, dist, travelMin: Math.round(dist * nobleSpeed) };
-        })
-        .sort((a, b) => a.dist - b.dist);
+    // Group noble villages by player, sorted by distance to this target
+    const byPlayer = {};
+    for (const v of (_lastTroops || [])) {
+        if (v.nobles <= 0) continue;
+        const player = _playerByCoord[v.coord] || '?';
+        const [vx, vy] = v.coord.split('|').map(Number);
+        const dist = Math.round(Math.sqrt((vx - tx) ** 2 + (vy - ty) ** 2) * 10) / 10;
+        if (!byPlayer[player]) byPlayer[player] = { player, total: 0, villages: [] };
+        byPlayer[player].total += v.nobles;
+        byPlayer[player].villages.push({ coord: v.coord, nobles: v.nobles, dist });
+    }
 
-    title.textContent = `Stack ${needed}× szlachcic → ${targetCoord}`;
+    const groups = Object.values(byPlayer)
+        .sort((a, b) => b.total - a.total);
 
-    list.innerHTML = candidates.length
-        ? candidates.map(c => {
-            const player  = _playerByCoord[c.coord] || '';
-            const enough  = c.nobles >= needed;
-            const current = inAssignment.has(c.coord);
-            const warn    = !enough ? ` <span style="color:#e08060" title="Za mało szlachciców (${c.nobles})">⚠${c.nobles}</span>` : '';
-            return `<div class="cand-item stack-noble-item${current ? ' cand-night' : ''}" data-coord="${c.coord}" data-aidx="${aIdx}" data-target="${targetCoord}">
-                <span class="cand-coord">${c.coord}</span>
-                ${player ? `<span class="cand-player">${player}</span>` : ''}
-                <span class="cand-meta">${c.dist} pol · ${fmtMinutes(c.travelMin)}</span>
-                <span class="cand-off">Szl: ${c.nobles}${warn}</span>
+    title.textContent = `Stack szlachcice → ${targetCoord}`;
+
+    list.innerHTML = groups.length
+        ? groups.map(g => {
+            g.villages.sort((a, b) => a.dist - b.dist);
+            const avgDist = (g.villages.reduce((s, v) => s + v.dist, 0) / g.villages.length).toFixed(1);
+            const overflow = g.total > needed ? ` <span style="color:#aaa;font-size:.8rem">(+${g.total - needed} → dalej)</span>` : '';
+            const coords = g.villages.map(v => `<code style="font-size:.75rem;opacity:.7">${v.coord}×${v.nobles}</code>`).join(' ');
+            return `<div class="cand-item stack-noble-item" data-player="${escAttr(g.player)}" data-aidx="${aIdx}" data-target="${targetCoord}">
+                <span class="cand-player" style="font-size:.95rem;font-weight:600">${g.player}</span>
+                <span class="cand-off">Szl: ${g.total}${overflow}</span>
+                <span class="cand-meta">~${avgDist} pol · ${g.villages.length} wioski</span>
+                <div style="margin-top:.2rem">${coords}</div>
             </div>`;
         }).join('')
         : '<div class="cand-loading" style="color:#c06060">Brak wiosek ze szlachcicami.</div>';
 
     list.querySelectorAll('.stack-noble-item').forEach(item => {
         item.addEventListener('click', () => {
-            stackNoblesTo(parseInt(item.dataset.aidx), item.dataset.coord, item.dataset.target);
+            stackNoblesFromPlayer(parseInt(item.dataset.aidx), item.dataset.player, item.dataset.target);
             modal.classList.remove('open');
         });
     });
 
-    // Position near button if modal hasn't been manually moved yet
     if (!modal.style.left) {
         const rect = btn.getBoundingClientRect();
         modal.style.top  = Math.min(rect.bottom + 6, window.innerHeight - 200) + 'px';
@@ -688,25 +692,48 @@ function showStackNoblesPopup(btn, aIdx, targetCoord) {
     modal.classList.add('open');
 }
 
-function stackNoblesTo(aIdx, chosenCoord, targetCoord) {
-    const a          = _currentAssignments[aIdx];
-    const count      = a.nobles_needed || a.nobles.length;  // fill ALL needed slots, not just assigned
-    const nobleSpeed = parseFloat(_settings.noble_speed || 35);
-    const [tx, ty]   = targetCoord.split('|').map(Number);
-    const [vx, vy]   = chosenCoord.split('|').map(Number);
-    const dist       = Math.round(Math.sqrt((vx - tx) ** 2 + (vy - ty) ** 2) * 10) / 10;
+function stackNoblesFromPlayer(aIdx, playerName, _unused) {
+    const a0     = _currentAssignments[aIdx];
+    const [tx0, ty0] = a0.target.split('|').map(Number);
 
-    // Preserve is_conqueror on first noble if it was set anywhere
-    const oldDetail  = a.nobles_detail || [];
-    const hadConq    = oldDetail.some(d => d.is_conqueror);
+    // Collect all noble villages of this player, closest to starting target first
+    const playerVills = (_lastTroops || [])
+        .filter(v => (_playerByCoord[v.coord] || '?') === playerName && v.nobles > 0)
+        .map(v => {
+            const [vx, vy] = v.coord.split('|').map(Number);
+            return { coord: v.coord, nobles: v.nobles, d0: Math.sqrt((vx - tx0) ** 2 + (vy - ty0) ** 2) };
+        })
+        .sort((a, b) => a.d0 - b.d0);
 
-    a.nobles         = Array(count).fill(chosenCoord);
-    a.nobles_detail  = Array.from({ length: count }, (_, i) => ({
-        coord: chosenCoord,
-        dist,
-        is_conqueror: i === 0 && hadConq,
-    }));
-    a.nobles_missing = Math.max(0, (a.nobles_needed || 0) - count);
+    // Flat queue: each village contributes v.nobles slots (one coord per noble)
+    const queue = playerVills.flatMap(v => Array(v.nobles).fill(v.coord));
+
+    let qIdx = 0;
+    for (let i = aIdx; i < _currentAssignments.length && qIdx < queue.length; i++) {
+        const a = _currentAssignments[i];
+        const needed = a.nobles_needed || 0;
+        if (needed <= 0) continue;
+        if (i !== aIdx && a.nobles.length >= needed) continue;
+
+        const [tx, ty] = a.target.split('|').map(Number);
+        const slots    = i === aIdx ? needed : Math.min(needed - a.nobles.length, queue.length - qIdx);
+        const batch    = queue.slice(qIdx, qIdx + slots);
+        const detail   = batch.map((coord, j) => {
+            const [vx, vy] = coord.split('|').map(Number);
+            const dist = Math.round(Math.sqrt((vx - tx) ** 2 + (vy - ty) ** 2) * 10) / 10;
+            const hadConq = i === aIdx && j === 0 && (a.nobles_detail || []).some(d => d.is_conqueror);
+            return { coord, dist, is_conqueror: hadConq };
+        });
+
+        if (i === aIdx) {
+            a.nobles = batch; a.nobles_detail = detail;
+        } else {
+            a.nobles = [...a.nobles, ...batch];
+            a.nobles_detail = [...(a.nobles_detail || []), ...detail];
+        }
+        a.nobles_missing = Math.max(0, (a.nobles_needed || 0) - a.nobles.length);
+        qIdx += slots;
+    }
 
     _renderAssignments(_currentAssignments, _planEditMode);
     _saveCurrentPlan();
