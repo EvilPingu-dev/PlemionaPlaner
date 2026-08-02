@@ -25,7 +25,17 @@ function renderTargets(targets) {
             <td>${t.offs_needed}</td>
             <td>${t.nobles_needed}</td>
             <td>${t.arrival_slot ?? 1}</td>
+            <td><input type="number" class="pts-input" min="0" step="1" style="width:75px"
+                data-coord="${t.coord}" value="${t.points ?? 0}"></td>
         </tr>`).join('');
+    document.querySelectorAll('#targets-table .pts-input').forEach(inp => {
+        inp.addEventListener('change', async () => {
+            await fetch(`/api/targets/${encodeURIComponent(inp.dataset.coord)}/points`, {
+                method: 'PATCH', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ points: parseInt(inp.value) || 0 }),
+            });
+        });
+    });
     show('targets-table-card');
 }
 

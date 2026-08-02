@@ -78,6 +78,18 @@ def save_targets():
     return jsonify({"count": len(targets), "targets": targets})
 
 
+@bp.patch("/api/targets/<path:coord>/points")
+def patch_target_points(coord: str):
+    pts = int(request.json.get("points", 0))
+    targets = load_json(TARGETS_FILE)
+    for t in targets:
+        if t["coord"] == coord:
+            t["points"] = max(0, pts)
+            break
+    save_json(TARGETS_FILE, targets)
+    return jsonify({"ok": True})
+
+
 # ── Fake targets ──────────────────────────────────────────────────────────────
 
 @bp.get("/api/fake-targets")

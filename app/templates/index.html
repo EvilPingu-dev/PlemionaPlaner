@@ -173,6 +173,7 @@ void 0;</pre>
                     <th>Offy potrzebne</th>
                     <th>Szlachcice potrzebni</th>
                     <th>Slot czasu</th>
+                    <th>Punkty celu</th>
                 </tr></thead>
                 <tbody></tbody>
             </table>
@@ -689,6 +690,11 @@ void 0;</pre>
             <label class="check-label">
                 <input type="checkbox" id="s-fill-free"> Uzupełnij brakujące offy wolnymi wioskami (drugi przebieg)
             </label>
+        </div>
+        <div class="form-row" style="margin-top:10px">
+            <label for="s-min-morale">Min. Morale (0 = brak kontroli)</label>
+            <input type="number" id="s-min-morale" value="100" min="0" max="100" step="5" style="width:70px">
+            <span style="color:#888;font-size:0.85em">% &nbsp;(100% ≙ cele nie mniejsze niż ~23% punktów gracza)</span>
         </div>
     </div>
 

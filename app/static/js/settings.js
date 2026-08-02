@@ -59,6 +59,7 @@ function applySettings(s) {
     document.getElementById('s-min-off').value         = s.min_off           ?? 1500;
     document.getElementById('s-block-night').checked   = !!s.block_night_sends;
     document.getElementById('s-fill-free').checked     = !!s.fill_free_villages;
+    document.getElementById('s-min-morale').value      = s.min_morale ?? 100;
     let slots = s.arrival_slots || [];
     if (!slots.length && s.arrival_datetime) slots = [{ label: 'Fala 1', datetime: s.arrival_datetime }];
     if (!slots.length) slots = [{ label: 'Fala 1', datetime: '' }];
@@ -132,6 +133,7 @@ async function saveSettings() {
         min_off:                parseInt(document.getElementById('s-min-off').value)           || 0,
         block_night_sends:      document.getElementById('s-block-night').checked,
         fill_free_villages:     document.getElementById('s-fill-free').checked,
+        min_morale:             parseInt(document.getElementById('s-min-morale').value) || 0,
     };
     try {
         const res = await fetch('/api/settings', {

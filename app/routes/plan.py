@@ -78,9 +78,15 @@ def run_plan():
         arrival_slots[1] = arrival_dt
 
     coord_to_player: dict[str, str] = {}
+    player_points: dict[str, int] = {}
     for pm in player_map:
+        pop_sum = 0
         for coord in pm.get("villages", []):
             coord_to_player[coord.strip()] = pm["player"]
+            v = next((vv for vv in villages if vv["coord"] == coord.strip()), None)
+            if v:
+                pop_sum += v.get("pop", 0)
+        player_points[pm["player"]] = pop_sum
 
     conflicts = load_json(CONFLICTS_FILE)
     if not isinstance(conflicts, list):
@@ -127,6 +133,8 @@ def run_plan():
         fake_targets=fake_targets,
         burst_targets=burst_targets,
         off_noble_gap_minutes=float(settings.get("off_noble_gap_minutes", 1)),
+        player_points=player_points,
+        min_morale=float(settings.get("min_morale", 0)) / 100.0,
     )
     plan_data = {
         "assignments":       assignments,

@@ -133,6 +133,13 @@ def parse_targets(raw: str) -> list[dict]:
             except ValueError:
                 slot = 1
 
+        points = 0
+        if len(parts) >= 5:
+            try:
+                points = max(0, int(parts[4]))
+            except ValueError:
+                points = 0
+
         targets.append(
             {
                 "coord":         coord,
@@ -141,6 +148,7 @@ def parse_targets(raw: str) -> list[dict]:
                 "offs_needed":   offs,
                 "nobles_needed": nobles,
                 "arrival_slot":  slot,
+                "points":        points,
             }
         )
 

@@ -25,6 +25,16 @@ def is_night_send(dist: float, speed: float, arrival_dt: datetime | None) -> boo
     return t >= _NIGHT_START_MIN or t <= _NIGHT_END_MIN
 
 
+def _morale(target_pts: int, attacker_pts: int) -> float:
+    """Return morale [0.0-1.0]. Returns 0.0 if target < 10% of attacker (blocked)."""
+    if attacker_pts <= 0 or target_pts <= 0:
+        return 1.0
+    ratio = target_pts / attacker_pts
+    if ratio < 0.10:
+        return 0.0
+    return min(1.0, 0.30 + 3.0 * ratio)
+
+
 def plan_action(
     villages: list,
     targets: list,
@@ -52,6 +62,8 @@ def plan_action(
     fake_targets: list | None = None,
     burst_targets: list | None = None,
     off_noble_gap_minutes: float = 0.0,
+    player_points: dict | None = None,   # player_name → total points (from pop sum)
+    min_morale: float = 0.0,             # 0.0 = no check, 1.0 = require 100% morale
 ) -> tuple[list, list, list, dict]:
     """
     Assign offensive villages and nobles to targets.
@@ -62,6 +74,7 @@ def plan_action(
     skip = disabled_coords or set()
     c2p  = coord_to_player or {}
     tom  = target_owner_map or {}
+    ppts = player_points or {}  # player_name → total points
 
     # Deduplicate targets: merge same-coord entries (sum offs/nobles, keep earliest slot).
     # Duplicate coords cause two separate assignments with potentially inverted arrival times
@@ -129,6 +142,15 @@ def plan_action(
         enemy_owner = tom.get(tcoord)
         already_on_enemy: set[str] = enemy_player_friendly.get(enemy_owner, set()) if enemy_owner else set()
         picked_for_target: set[str] = set()
+        target_pts = t.get("points", 0)
+
+        def _morale_ok(v_coord: str) -> bool:
+            if min_morale <= 0 or target_pts <= 0 or not ppts:
+                return True
+            fp = c2p.get(v_coord)
+            if not fp:
+                return True
+            return _morale(target_pts, ppts.get(fp, 0)) >= min_morale
 
         def _blocked(v_coord: str) -> bool:
             fp = c2p.get(v_coord)
@@ -176,6 +198,8 @@ def plan_action(
                 break
             if _blocked(v["coord"]):
                 continue
+            if not _morale_ok(v["coord"]):
+                continue
             chosen_offs.append(v)
             used_off_coords.add(v["coord"])
             fp = c2p.get(v["coord"])
@@ -196,6 +220,7 @@ def plan_action(
             and (noble_max_dist <= 0 or _dist(nv["x"], nv["y"], tx, ty) <= noble_max_dist)
             and (noble_min_dist <= 0 or _dist(nv["x"], nv["y"], tx, ty) >= noble_min_dist)
             and not (block_night_sends and is_night_send(_dist(nv["x"], nv["y"], tx, ty), noble_speed, t_arrival))
+            and _morale_ok(nv["coord"])
         ]
         if noble_sort == "farthest":
             noble_candidates.sort(key=lambda x: -_dist(x[1]["x"], x[1]["y"], tx, ty))
@@ -219,9 +244,9 @@ def plan_action(
                 fp = c2p.get(nv["coord"])
                 if fp:
                     by_player[fp].append((i, nv))
-            # Pick the best player: enough nobles, no blocked, sorted by our key
+            # Pick the best player: enough nobles, no blocked, no morale issues
             for fp, group in by_player.items():
-                if len(group) >= t["nobles_needed"] and not any(_blocked(nv["coord"]) for _, nv in group):
+                if len(group) >= t["nobles_needed"] and not any(_blocked(nv["coord"]) for _, nv in group) and _morale_ok(group[0][1]["coord"]):
                     chosen_nobles = [nv for _, nv in group[:t["nobles_needed"]]]
                     for idx, _ in group[:t["nobles_needed"]]:
                         used_noble_indices.add(idx)
@@ -238,7 +263,7 @@ def plan_action(
                     break
                 if _blocked(nv["coord"]):
                     continue
-                chosen_nobles.append(nv)
+                chosen_nobles.append(nv)  # morale already filtered in noble_candidates
                 used_noble_indices.add(i)
                 noble_assigned_count += 1
                 fp = c2p.get(nv["coord"])
