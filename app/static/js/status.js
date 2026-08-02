@@ -151,7 +151,9 @@ function _renderStatusList() {
         for (const c of (asgn.nobles || [])) addRow(c, 'SZLACHCIC', asgn.noble_arrival_dt || asgn.arrival_dt);
     }
 
-    const targetOrder = Object.keys(byTarget).sort();
+    // Preserve plan order (same as Forum tab), deduplicated
+    const seen = new Set();
+    const targetOrder = _statusPlan.map(a => a.target).filter(t => { if (seen.has(t)) return false; seen.add(t); return true; });
 
     const makeRow = (r) => {
         const fromId = _villageIds[r.coord];
