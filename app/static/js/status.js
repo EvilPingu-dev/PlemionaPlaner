@@ -555,17 +555,15 @@ async function generateStatusForum() {
             const idx = (countPerCoord[key] = (countPerCoord[key] ?? -1) + 1);
             const sid  = _statusId(s.from_coord, s.target, s.type, idx);
             const st   = _statusMap[sid] || 'unknown';
-            const stTag = st === 'sent' ? '[color=#33aa33]✅ wysłana[/color]'
-                        : st === 'missed' ? '[color=#cc3333]❌ nie wysłana[/color]'
-                        : '[color=#888888]❓ nieznany[/color]';
+            const stTag = st === 'sent' ? '✅' : st === 'missed' ? '❌' : '❓';
             const dt      = new Date(s.send_dt);
             const sendFmt = `${String(dt.getDate()).padStart(2,'0')}.${String(dt.getMonth()+1).padStart(2,'0')} ${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}:${String(dt.getSeconds()).padStart(2,'0')}`;
             const player  = s.player ? `[player]${s.player}[/player]` : '-';
             const typeTag = s.type === 'OFF' ? '[b]OFF[/b]' : s.type === 'SZLACHCIC' ? '[b]SZLACHCIC[/b]' : s.type;
-            return `[*]${i+1}[|]${player}[|]${typeTag}[|][coord]${s.from_coord}[/coord][|][coord]${s.target}[/coord][|]${s.dist} pol[|]${fmtMinutes(s.travel_min)}[|]${sendFmt}[|]${stTag}`;
+            return `[*]${i+1}[|]${player}[|]${typeTag}[|][coord]${s.target}[/coord][|]${s.dist} pol[|]${fmtMinutes(s.travel_min)}[|]${sendFmt}[|]${stTag}`;
         }).join('\n');
 
-        const header = `[table][**]#[||]Gracz[||]Typ[||]Z wioski[||]Cel[||]Odl.[||]Podróż[||]Wysyłka[||]Status[/**]`;
+        const header = `[table][**]#[||]Gracz[||]Typ[||]Cel[||]Odl.[||]Podróż[||]Wysyłka[||]Status[/**]`;
         document.getElementById('status-forum-bbcode').value = `${header}\n${rows}\n[/table]`;
         show('status-forum-preview-card');
         show('btn-copy-status-forum');
