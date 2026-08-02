@@ -305,9 +305,20 @@ function _renderAssignments(assignments, editMode) {
         });
     });
 
-    // ── Per-assignment Fala slot buttons ────────────────────────────────────
+    // ── Per-assignment Fala slot buttons — only update this assignment ───────
     document.querySelectorAll('.slot-apply-single').forEach(btn => {
-        btn.addEventListener('click', () => _applySlotToAll(btn.dataset.dt.slice(0, 19)));
+        btn.addEventListener('click', () => {
+            const aIdx = parseInt(btn.dataset.aidx);
+            const dt   = btn.dataset.dt.slice(0, 19);
+            const gapMs = _gapFieldsToMs('plan');
+            const a = _currentAssignments[aIdx];
+            a.arrival_dt       = dt;
+            a.noble_arrival_dt = (gapMs > 0)
+                ? _toLocalISOString(new Date(new Date(dt).getTime() + gapMs))
+                : dt;
+            _renderAssignments(_currentAssignments, _planEditMode);
+            _saveCurrentPlan();
+        });
     });
 
     // ── Promote village from fejki/burzaki to offs or nobles ─────────────
