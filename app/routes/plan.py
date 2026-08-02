@@ -311,7 +311,7 @@ def get_candidates():
     old_coord    = data.get("old_coord", "")
     coord_type   = data.get("type", "offs")
     blacklisted  = set(data.get("blacklisted", []))
-    limit        = min(int(data.get("limit", 10)), 30)
+    limit        = int(data.get("limit", 500))
 
     villages   = load_troops()
     targets_   = load_json(TARGETS_FILE)

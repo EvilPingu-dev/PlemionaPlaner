@@ -310,12 +310,13 @@
     border-radius: 6px;
     box-shadow: 0 4px 20px rgba(0,0,0,.7);
     display: none;
-    max-height: 340px;
-    min-width: 290px;
+    max-height: 520px;
+    min-width: 310px;
     overflow-y: auto;
     position: absolute;
     z-index: 9000;
 }
+#candidates-popup .cand-list { overflow-y: auto; max-height: 450px; }
 
 /* ── Stack nobles draggable modal ───────────────────────────────────────── */
 #stack-nobles-modal {

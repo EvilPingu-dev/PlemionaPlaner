@@ -590,7 +590,7 @@ async function showCandidates(btn, aIdx, key, oldCoord, targetCoord) {
         const res  = await fetch('/api/plan/candidates', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ target_coord: targetCoord, old_coord: oldCoord,
-                                   type: key, blacklisted: excl, limit: 10 }),
+                                   type: key, blacklisted: excl, limit: 500 }),
         });
         const data = await res.json();
         const cands = data.candidates || [];
@@ -598,24 +598,38 @@ async function showCandidates(btn, aIdx, key, oldCoord, targetCoord) {
             popup.innerHTML = '<div class="cand-loading" style="color:#c06060">Brak dostępnych wiosek.</div>';
             return;
         }
-        popup.innerHTML = cands.map(c => {
-            const night = c.is_night ? ' 🌙' : '';
-            return `<div class="cand-item${c.is_night ? ' cand-night' : ''}"
-                data-aidx="${aIdx}" data-key="${key}" data-old="${oldCoord}"
-                data-new="${c.coord}" data-target="${targetCoord}">
-                <span class="cand-coord">${c.coord}</span>
-                ${c.player ? `<span class="cand-player">${c.player}</span>` : ''}
-                <span class="cand-meta">${c.dist} pol · ${c.travel_min}min${night}</span>
-                <span class="cand-off">OFF: ${c.off}${c.rams ? ` · Tar: ${c.rams}` : ''}</span>
-            </div>`;
-        }).join('');
-        popup.querySelectorAll('.cand-item').forEach(item => {
-            item.addEventListener('click', async () => {
-                popup.style.display = 'none';
-                await swapCoord(parseInt(item.dataset.aidx), item.dataset.key,
-                                item.dataset.old, item.dataset.new, item.dataset.target);
+        const renderCands = (filter) => {
+            const filtered = filter ? cands.filter(c =>
+                c.coord.includes(filter) || c.player.toLowerCase().includes(filter.toLowerCase())
+            ) : cands;
+            const items = filtered.map(c => {
+                const night = c.is_night ? ' 🌙' : '';
+                return `<div class="cand-item${c.is_night ? ' cand-night' : ''}"
+                    data-aidx="${aIdx}" data-key="${key}" data-old="${oldCoord}"
+                    data-new="${c.coord}" data-target="${targetCoord}">
+                    <span class="cand-coord">${c.coord}</span>
+                    ${c.player ? `<span class="cand-player">${c.player}</span>` : ''}
+                    <span class="cand-meta">${c.dist} pol · ${c.travel_min}min${night}</span>
+                    <span class="cand-off">OFF: ${fmt(c.off)}${c.rams ? ` · Tar: ${c.rams}` : ''}</span>
+                </div>`;
+            }).join('');
+            const listEl = popup.querySelector('.cand-list');
+            if (listEl) listEl.innerHTML = items || '<div class="cand-loading" style="color:#888">Brak wyników.</div>';
+            popup.querySelectorAll('.cand-item').forEach(item => {
+                item.addEventListener('click', async () => {
+                    popup.style.display = 'none';
+                    await swapCoord(parseInt(item.dataset.aidx), item.dataset.key,
+                                    item.dataset.old, item.dataset.new, item.dataset.target);
+                });
             });
-        });
+        };
+        popup.innerHTML = `<div style="padding:.4rem .5rem;border-bottom:1px solid #1a3a6a">
+            <input class="cand-filter" placeholder="Filtruj gracz / koord…" style="width:100%;box-sizing:border-box;background:#0a1525;border:1px solid #2a4a7a;border-radius:4px;color:#ccd;padding:.25rem .4rem;font-size:.82rem">
+            <span style="font-size:.72rem;color:#556;float:right;margin-top:.2rem">${cands.length} wiosek</span>
+        </div><div class="cand-list"></div>`;
+        renderCands('');
+        popup.querySelector('.cand-filter').addEventListener('input', e => renderCands(e.target.value.trim()));
+        popup.querySelector('.cand-filter').focus();
     } catch {
         popup.innerHTML = '<div class="cand-loading" style="color:#c06060">Błąd połączenia.</div>';
     }
