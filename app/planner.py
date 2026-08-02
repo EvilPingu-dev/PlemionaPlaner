@@ -252,6 +252,7 @@ def plan_action(
                 "coord":    v["coord"],
                 "dist":     round(_dist(v["x"], v["y"], tx, ty), 1),
                 "speed":    _eff_off_speed(v, off_speed, ram_speed),
+                "off":      v["off"],
                 "is_night": is_night_send(_dist(v["x"], v["y"], tx, ty),
                                           _eff_off_speed(v, off_speed, ram_speed), t_arrival),
             }

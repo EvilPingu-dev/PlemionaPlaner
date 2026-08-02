@@ -133,6 +133,8 @@ function _renderAssignments(assignments, editMode) {
             const nightMark = isNight ? ' <span class="night-mark" title="Nocna wysyłka!">🌙</span>' : '';
             const playerName = _playerByCoord[d.coord] || '';
             const playerSpan = playerName ? `<span class="tag-player">${playerName}</span> ` : '';
+            const offVal     = d.off ?? (_lastTroops || []).find(v => v.coord === d.coord)?.off;
+            const offSpan    = (key === 'offs' && offVal != null) ? ` <small class="dist-tag" style="color:#cc8844">⚔ ${fmt(offVal)}</small>` : '';
             const removeBtn = editMode
                 ? `<button class="remove-coord" data-aidx="${aIdx}" data-key="${key}" data-cidx="${idx}" title="Usuń">✕</button>`
                 : '';
@@ -141,7 +143,7 @@ function _renderAssignments(assignments, editMode) {
             const crownBtn = key === 'nobles'
                 ? `<button class="crown-coord${d.is_conqueror ? ' crown-active' : ''}" data-aidx="${aIdx}" data-cidx="${idx}" title="${d.is_conqueror ? 'Zdobywca (kliknij by odznaczać)' : 'Oznacz jako zdobywcę (+5s później)'}">👑</button>`
                 : '';
-            return `<span class="coord-tag ${cls}${isNight ? ' night-send' : ''}${d.is_conqueror ? ' conqueror-tag' : ''}" draggable="true" data-aidx="${aIdx}" data-key="${key}" data-cidx="${idx}">${removeBtn}${reloadBtn}${pickBtn}${crownBtn}${playerSpan}${d.coord}${distStr}${nightMark}</span>`;
+            return `<span class="coord-tag ${cls}${isNight ? ' night-send' : ''}${d.is_conqueror ? ' conqueror-tag' : ''}" draggable="true" data-aidx="${aIdx}" data-key="${key}" data-cidx="${idx}">${removeBtn}${reloadBtn}${pickBtn}${crownBtn}${playerSpan}${d.coord}${offSpan}${distStr}${nightMark}</span>`;
         };
 
         const offTags   = (a.offs_detail   || a.offs.map(c   => ({coord: c, dist: null}))).map((d, i) => makeTag(d, offSpeed,   '',          'offs',   i, offArrivalStr)).join('');
