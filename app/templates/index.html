@@ -824,6 +824,20 @@ void 0;</pre>
         </div>
     </div>
 
+    <div class="card">
+        <h2>📊 Forum – status wysłek</h2>
+        <p class="hint">Generuje BBCode z listą wszystkich wysłek posortowanych po czasie wraz ze statusem. Można wkleić na forum dla innych liderów.</p>
+        <div class="btn-row">
+            <button class="btn btn-success" id="btn-gen-status-forum">📋 Generuj BBCode statusu</button>
+            <button class="btn btn-copy" id="btn-copy-status-forum" style="display:none">📋 Kopiuj</button>
+            <span class="status-msg" id="status-forum-msg"></span>
+        </div>
+    </div>
+    <div class="card" id="status-forum-preview-card" style="display:none">
+        <h2>Podgląd BBCode statusu</h2>
+        <textarea id="status-forum-bbcode" class="bbcode-ta" rows="20" readonly></textarea>
+    </div>
+
     <div id="status-player-list"></div>
 </section>
 

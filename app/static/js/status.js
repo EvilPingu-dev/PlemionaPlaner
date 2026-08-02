@@ -526,6 +526,53 @@ document.getElementById('btn-copy-cancelled').addEventListener('click', () => {
     });
 });
 
+document.getElementById('btn-gen-status-forum').addEventListener('click', generateStatusForum);
+document.getElementById('btn-copy-status-forum').addEventListener('click', () => {
+    navigator.clipboard.writeText(document.getElementById('status-forum-bbcode').value).then(() => {
+        const btn = document.getElementById('btn-copy-status-forum');
+        const orig = btn.textContent;
+        btn.textContent = '✓ Skopiowano!';
+        setTimeout(() => btn.textContent = orig, 2000);
+    });
+});
+
+async function generateStatusForum() {
+    const status = document.getElementById('status-forum-msg');
+    setStatus(status, 'Generowanie…');
+    try {
+        const payload = _currentAssignments.length ? { assignments: _currentAssignments } : {};
+        const res  = await fetch('/api/timeline', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+        if (!res.ok) { setStatus(status, data.error || 'Błąd serwera', 'err'); return; }
+
+        // Rebuild status IDs the same way _renderStatusList does
+        const countPerCoord = {};
+        const rows = data.sends.map((s, i) => {
+            const key = `${s.from_coord}:${s.type}`;
+            const idx = (countPerCoord[key] = (countPerCoord[key] ?? -1) + 1);
+            const sid  = _statusId(s.from_coord, s.target, s.type, idx);
+            const st   = _statusMap[sid] || 'unknown';
+            const stTag = st === 'sent' ? '[color=#33aa33]✅ wysłana[/color]'
+                        : st === 'missed' ? '[color=#cc3333]❌ nie wysłana[/color]'
+                        : '[color=#888888]❓ nieznany[/color]';
+            const dt      = new Date(s.send_dt);
+            const sendFmt = `${String(dt.getDate()).padStart(2,'0')}.${String(dt.getMonth()+1).padStart(2,'0')} ${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}:${String(dt.getSeconds()).padStart(2,'0')}`;
+            const player  = s.player ? `[player]${s.player}[/player]` : '-';
+            const typeTag = s.type === 'OFF' ? '[b]OFF[/b]' : s.type === 'SZLACHCIC' ? '[b]SZLACHCIC[/b]' : s.type;
+            return `[*]${i+1}[|]${player}[|]${typeTag}[|][coord]${s.from_coord}[/coord][|][coord]${s.target}[/coord][|]${s.dist} pol[|]${fmtMinutes(s.travel_min)}[|]${sendFmt}[|]${stTag}`;
+        }).join('\n');
+
+        const header = `[table][**]#[||]Gracz[||]Typ[||]Z wioski[||]Cel[||]Odl.[||]Podróż[||]Wysyłka[||]Status[/**]`;
+        document.getElementById('status-forum-bbcode').value = `${header}\n${rows}\n[/table]`;
+        show('status-forum-preview-card');
+        show('btn-copy-status-forum');
+        setStatus(status, `✓ ${data.sends.length} wysyłek.`, 'ok');
+    } catch (e) { setStatus(status, 'Błąd: ' + e.message, 'err'); }
+}
+
 // Auto-load when switching to status tab
 document.querySelectorAll('.tab-btn[data-tab="status"]').forEach(btn => {
     btn.addEventListener('click', () => {
