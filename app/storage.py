@@ -44,6 +44,7 @@ DEFAULT_SETTINGS: dict = {
     "min_off":                 1500,   # minimum OFF troops required to use a village
     "fill_free_villages":      False,  # fill missing offs from unassigned villages
     "min_morale":              100,    # min morale % required (0 = no check, 100 = block newbie-protected targets)
+    "noble_priority_players":  [],    # players who always get noble assignments first (one name per entry)
     "greeting": (
         "Witam,\n"
         "poniżej są wasze cele, proszę zapoznać się z treścią.\n"

@@ -64,6 +64,7 @@ def plan_action(
     off_noble_gap_minutes: float = 0.0,
     player_points: dict | None = None,   # player_name → total points (from pop sum)
     min_morale: float = 0.0,             # 0.0 = no check, 1.0 = require 100% morale
+    noble_priority_players: list | None = None,  # always assign nobles to these players first
 ) -> tuple[list, list, list, dict]:
     """
     Assign offensive villages and nobles to targets.
@@ -75,6 +76,7 @@ def plan_action(
     c2p  = coord_to_player or {}
     tom  = target_owner_map or {}
     ppts = player_points or {}  # player_name → total points
+    _priority_set: set[str] = set(noble_priority_players or [])
 
     # Deduplicate targets: merge same-coord entries (sum offs/nobles, keep earliest slot).
     # Duplicate coords cause two separate assignments with potentially inverted arrival times
@@ -233,6 +235,9 @@ def plan_action(
             ))
         if noble_sort_invert:
             noble_candidates.reverse()
+        # Promote priority players to the front while preserving relative order
+        if _priority_set and c2p:
+            noble_candidates.sort(key=lambda x: (0 if c2p.get(x[1]["coord"]) in _priority_set else 1))
 
         # ── Prefer a single player who can cover the entire noble requirement ──
         # Group candidates by player; if any player has enough nobles and none
@@ -244,8 +249,9 @@ def plan_action(
                 fp = c2p.get(nv["coord"])
                 if fp:
                     by_player[fp].append((i, nv))
-            # Pick the best player: enough nobles, no blocked, no morale issues
-            for fp, group in by_player.items():
+            # Priority players are checked first
+            _sorted_players = sorted(by_player.items(), key=lambda x: (0 if x[0] in _priority_set else 1))
+            for fp, group in _sorted_players:
                 if len(group) >= t["nobles_needed"] and not any(_blocked(nv["coord"]) for _, nv in group) and _morale_ok(group[0][1]["coord"]):
                     chosen_nobles = [nv for _, nv in group[:t["nobles_needed"]]]
                     for idx, _ in group[:t["nobles_needed"]]:

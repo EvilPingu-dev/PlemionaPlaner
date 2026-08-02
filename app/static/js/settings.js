@@ -60,6 +60,7 @@ function applySettings(s) {
     document.getElementById('s-block-night').checked   = !!s.block_night_sends;
     document.getElementById('s-fill-free').checked     = !!s.fill_free_villages;
     document.getElementById('s-min-morale').value      = s.min_morale ?? 100;
+    document.getElementById('s-noble-priority').value  = (s.noble_priority_players || []).join('\n');
     let slots = s.arrival_slots || [];
     if (!slots.length && s.arrival_datetime) slots = [{ label: 'Fala 1', datetime: s.arrival_datetime }];
     if (!slots.length) slots = [{ label: 'Fala 1', datetime: '' }];
@@ -134,6 +135,8 @@ async function saveSettings() {
         block_night_sends:      document.getElementById('s-block-night').checked,
         fill_free_villages:     document.getElementById('s-fill-free').checked,
         min_morale:             parseInt(document.getElementById('s-min-morale').value) || 0,
+        noble_priority_players: document.getElementById('s-noble-priority').value
+                                    .split('\n').map(x => x.trim()).filter(Boolean),
     };
     try {
         const res = await fetch('/api/settings', {

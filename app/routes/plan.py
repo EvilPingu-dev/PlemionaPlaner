@@ -152,6 +152,7 @@ def run_plan():
         off_noble_gap_minutes=float(settings.get("off_noble_gap_minutes", 1)),
         player_points=player_points,
         min_morale=float(settings.get("min_morale", 100)) / 100.0,
+        noble_priority_players=settings.get("noble_priority_players", []),
     )
     plan_data = {
         "assignments":       assignments,
