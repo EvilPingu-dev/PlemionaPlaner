@@ -37,6 +37,7 @@ def export_csv():
     assignments = body.get("assignments") or plan.get("assignments", [])
 
     off_speed   = float(settings.get("off_speed",   18))
+    ram_speed   = float(settings.get("ram_speed",   30))
     noble_speed = float(settings.get("noble_speed", 35))
 
     village_by_coord = {v["coord"]: v for v in villages_d}

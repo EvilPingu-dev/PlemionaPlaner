@@ -42,6 +42,7 @@ def _build_send_schedule() -> list[dict]:
     import math
 
     off_speed   = float(settings.get("off_speed",   18))
+    ram_speed   = float(settings.get("ram_speed",   30))
     noble_speed = float(settings.get("noble_speed", 35))
 
     village_by_coord = {v["coord"]: v for v in villages}
@@ -67,7 +68,8 @@ def _build_send_schedule() -> list[dict]:
                 continue
             tx, ty = map(int, tcoord.split("|"))
             d = math.sqrt((v["x"] - tx) ** 2 + (v["y"] - ty) ** 2)
-            send_dt = arr_dt - timedelta(minutes=d * off_speed)
+            v_spd = ram_speed if v.get("rams", 0) > 0 else off_speed
+            send_dt = arr_dt - timedelta(minutes=d * v_spd)
             schedule.append({
                 "player": player_by_coord.get(coord, coord),
                 "coord":  coord,

@@ -37,6 +37,7 @@ def get_timeline():
     fake_assignments  = body.get("fake_assignments")  or plan.get("fake_assignments", [])
 
     off_speed   = float(settings.get("off_speed",   18))
+    ram_speed   = float(settings.get("ram_speed",   30))
     noble_speed = float(settings.get("noble_speed", 35))
     server      = settings.get("server", "")
 
@@ -81,7 +82,9 @@ def get_timeline():
         arr_dt   = datetime.fromisoformat(raw_adt)
         noble_dt = datetime.fromisoformat(raw_ndt) if raw_ndt else arr_dt
         for coord in asgn.get("offs", []):
-            _add_send(coord, off_speed, "OFF", arr_dt, tcoord)
+            v_off = village_by_coord.get(coord)
+            v_spd = ram_speed if (v_off and v_off.get("rams", 0) > 0) else off_speed
+            _add_send(coord, v_spd, "OFF", arr_dt, tcoord)
         for coord in asgn.get("nobles", []):
             _add_send(coord, noble_speed, "SZLACHCIC", noble_dt, tcoord)
 
