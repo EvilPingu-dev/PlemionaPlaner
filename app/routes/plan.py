@@ -322,7 +322,9 @@ def get_candidates():
     if not isinstance(plan, dict):
         return jsonify({"candidates": []})
 
-    assignments = plan.get("assignments", [])
+    # Prefer live assignments from the request body over the disk file (avoids stale-cache issues)
+    assignments_override = data.get("assignments")
+    assignments = assignments_override if isinstance(assignments_override, list) else plan.get("assignments", [])
     a_idx       = next((i for i, a in enumerate(assignments) if a["target"] == target_coord), None)
     target_data = next((t for t in targets_ if t["coord"] == target_coord), None)
     if a_idx is None or target_data is None:

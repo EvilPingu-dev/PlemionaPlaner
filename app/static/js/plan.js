@@ -590,7 +590,8 @@ async function showCandidates(btn, aIdx, key, oldCoord, targetCoord) {
         const res  = await fetch('/api/plan/candidates', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ target_coord: targetCoord, old_coord: oldCoord,
-                                   type: key, blacklisted: excl, limit: 500 }),
+                                   type: key, blacklisted: excl, limit: 500,
+                                   assignments: _currentAssignments }),
         });
         const data = await res.json();
         const cands = data.candidates || [];
