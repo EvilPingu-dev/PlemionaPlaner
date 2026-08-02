@@ -64,6 +64,15 @@ document.getElementById('btn-run-plan').addEventListener('click', runPlan);
 document.getElementById('btn-gen-messages').addEventListener('click', generateMessages);
 document.querySelectorAll('.btn-save-all').forEach(btn => btn.addEventListener('click', saveSettings));
 document.getElementById('btn-gen-forum').addEventListener('click', generateForum);
+document.getElementById('btn-copy-forum-timeline').addEventListener('click', () => {
+    const ta = document.getElementById('forum-timeline-bbcode');
+    navigator.clipboard.writeText(ta.value).then(() => {
+        const btn = document.getElementById('btn-copy-forum-timeline');
+        const orig = btn.textContent; btn.textContent = '✓ Skopiowano!';
+        setTimeout(() => btn.textContent = orig, 2000);
+    });
+});
+document.getElementById('btn-gen-forum-timeline').addEventListener('click', generateForumTimeline);
 
 document.getElementById('btn-gen-timeline').addEventListener('click', generateTimeline);
 document.getElementById('btn-validate').addEventListener('click', validatePlan);

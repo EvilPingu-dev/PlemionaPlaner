@@ -464,6 +464,19 @@ void 0;</pre>
         <h2>BBCode per gracz</h2>
         <div id="forum-players-output"></div>
     </div>
+    <div class="card">
+        <h2>📅 Oś czasu (forum)</h2>
+        <p class="hint">Wszystkie wysyłki posortowane po czasie – bez grupowania graczy. Do wklejenia na forum.</p>
+        <div class="btn-row">
+            <button class="btn btn-success" id="btn-gen-forum-timeline">⏱ Generuj oś czasu</button>
+            <button class="btn btn-copy" id="btn-copy-forum-timeline" style="display:none">📋 Kopiuj</button>
+            <span class="status-msg" id="forum-timeline-status"></span>
+        </div>
+    </div>
+    <div class="card" id="forum-timeline-preview-card" style="display:none">
+        <h2>Podgląd osi czasu</h2>
+        <textarea id="forum-timeline-bbcode" class="bbcode-ta" rows="20" readonly></textarea>
+    </div>
 </section>
 
 <!-- TAB: TIMELINE -->

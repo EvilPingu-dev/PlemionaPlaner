@@ -15,6 +15,47 @@ async function generateForum() {
 }
 
 
+/* ── Forum Timeline (flat, sorted by send time) ──────────────────────────── */
+
+async function generateForumTimeline() {
+    const status = document.getElementById('forum-timeline-status');
+    setStatus(status, 'Generowanie…');
+    const gapMs = _gapFieldsToMs('plan');
+    const payload = {
+        assignments: _currentAssignments.map((a, aIdx) => {
+            const dtInput = document.querySelector(`.asgn-off-dt[data-aidx="${aIdx}"]`);
+            const offDt = dtInput ? dtInput.value : (a.arrival_dt || '');
+            let nobleDt = offDt;
+            if (offDt && gapMs > 0)
+                nobleDt = _toLocalISOString(new Date(new Date(offDt).getTime() + gapMs));
+            return { ...a, arrival_dt: offDt || a.arrival_dt, noble_arrival_dt: nobleDt || a.noble_arrival_dt };
+        }),
+    };
+    try {
+        const res  = await fetch('/api/timeline', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+        const data = await res.json();
+        if (!res.ok) { setStatus(status, data.error || 'Błąd serwera', 'err'); return; }
+
+        const rows = data.sends.map((s, i) => {
+            const dt = new Date(s.send_dt);
+            const sendFmt = `${String(dt.getDate()).padStart(2,'0')}.${String(dt.getMonth()+1).padStart(2,'0')} ${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}:${String(dt.getSeconds()).padStart(2,'0')}`;
+            const player  = s.player ? `[player]${s.player}[/player]` : '-';
+            const typeTag = s.type === 'OFF' ? '[b]OFF[/b]' : s.type === 'SZLACHCIC' ? '[b]SZLACHCIC[/b]' : s.type;
+            const travel  = fmtMinutes(s.travel_min);
+            return `[*]${i+1}[|]${player}[|]${typeTag}[|][coord]${s.from_coord}[/coord][|][coord]${s.target}[/coord][|]${s.dist} pol[|]${travel}[|]${sendFmt}`;
+        }).join('\n');
+
+        const header = `[table][**]#[||]Gracz[||]Typ[||]Z wioski[||]Cel[||]Odl.[||]Podróż[||]Wysyłka[/**]`;
+        const bbcode = `${header}\n${rows}\n[/table]`;
+
+        document.getElementById('forum-timeline-bbcode').value = bbcode;
+        show('forum-timeline-preview-card');
+        show('btn-copy-forum-timeline');
+        setStatus(status, `✓ ${data.sends.length} wysyłek.`, 'ok');
+    } catch { setStatus(status, 'Błąd połączenia', 'err'); }
+}
+
+
 /* ── Timeline ───────────────────────────────────────────────────────────── */
 
 async function generateTimeline() {
