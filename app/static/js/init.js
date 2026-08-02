@@ -82,8 +82,7 @@ document.getElementById('btn-calc-returns').addEventListener('click', calcReturn
 document.getElementById('btn-timing-apply-all').addEventListener('click', () => {
     const dt = document.getElementById('timing-bulk-dt').value;
     if (!dt) return;
-    document.querySelectorAll('.asgn-off-dt').forEach(inp => { inp.value = dt.slice(0, 19); });
-    _updateNobleChips();
+    _applySlotToAll(dt.slice(0, 19));
 });
 document.getElementById('plan-gap-min').addEventListener('input', _updateNobleChips);
 document.getElementById('plan-gap-sec').addEventListener('input', _updateNobleChips);

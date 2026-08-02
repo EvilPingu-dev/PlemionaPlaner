@@ -82,6 +82,18 @@ function renderPlan({ summary, assignments, burst_assignments, fake_assignments 
     if ((fake_assignments  || []).length) show('plan-fake-card');  else hide('plan-fake-card');
 }
 
+function _applySlotToAll(dt) {
+    const gapMs = _gapFieldsToMs('plan');
+    _currentAssignments.forEach(a => {
+        a.arrival_dt = dt;
+        a.noble_arrival_dt = (gapMs > 0)
+            ? _toLocalISOString(new Date(new Date(dt).getTime() + gapMs))
+            : dt;
+    });
+    _renderAssignments(_currentAssignments, _planEditMode);
+    _saveCurrentPlan();
+}
+
 function _populateTimingToolbar() {
     _gapMinutesToFields('plan', _settings.off_noble_gap_minutes ?? 1);
     const slots = _settings.arrival_slots || [];
@@ -92,11 +104,7 @@ function _populateTimingToolbar() {
         return `<button class="btn slot-apply-btn" data-slot="${idx + 1}" data-dt="${_esc(slot.datetime || '')}">${label}: ${dtStr}</button>`;
     }).join('');
     btnContainer.querySelectorAll('.slot-apply-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const dt = btn.dataset.dt;
-            document.querySelectorAll('.asgn-off-dt').forEach(inp => { inp.value = dt.slice(0, 19); });
-            _updateNobleChips();
-        });
+        btn.addEventListener('click', () => _applySlotToAll(btn.dataset.dt.slice(0, 19)));
     });
 }
 
@@ -299,28 +307,7 @@ function _renderAssignments(assignments, editMode) {
 
     // ── Per-assignment Fala slot buttons ────────────────────────────────────
     document.querySelectorAll('.slot-apply-single').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const aIdx = parseInt(btn.dataset.aidx);
-            const inp  = document.querySelector(`.asgn-off-dt[data-aidx="${aIdx}"]`);
-            if (inp) {
-                inp.value = btn.dataset.dt.slice(0, 19);
-                inp.dispatchEvent(new Event('change'));
-            }
-            _updateNobleChips();
-        });
-    });
-
-    // ── Per-assignment Fala slot buttons ──────────────────────────────────
-    document.querySelectorAll('.slot-apply-single').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const aIdx = parseInt(btn.dataset.aidx);
-            const inp  = document.querySelector(`.asgn-off-dt[data-aidx="${aIdx}"]`);
-            if (inp) {
-                inp.value = btn.dataset.dt.slice(0, 19);
-                inp.dispatchEvent(new Event('change'));
-            }
-            _updateNobleChips();
-        });
+        btn.addEventListener('click', () => _applySlotToAll(btn.dataset.dt.slice(0, 19)));
     });
 
     // ── Promote village from fejki/burzaki to offs or nobles ─────────────
