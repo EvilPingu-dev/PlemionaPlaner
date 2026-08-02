@@ -6,6 +6,9 @@ let _playerByCoord = {};
 // Cached last troop list so players tab can refresh owner column
 let _lastTroops = [];
 
+// Whether the troops table is in manual-edit mode
+let _troopsEditMode = false;
+
 // Excluded from replacements: Set of "x|y" coords
 let _excludedReplacements = new Set();
 
@@ -63,14 +66,17 @@ function renderTroops(villages) {
     document.getElementById('troops-count').textContent = villages.length;
     document.querySelector('#troops-table tbody').innerHTML = villages.map(v => {
         const excl = _excludedReplacements.has(v.coord);
+        const cell = (val, field) => _troopsEditMode
+            ? `<td><input class="troop-edit-input" type="number" min="0" data-coord="${v.coord}" data-field="${field}" value="${val}" style="width:5rem"></td>`
+            : `<td class="${val > 0 ? '' : 'dim'}">${fmt(val)}</td>`;
         return `<tr class="${excl ? 'row-excluded' : ''}">
             <td><code>${v.coord}</code></td>
             <td class="dim">${_playerByCoord[v.coord] || ''}</td>
             <td>${fmt(v.pop)}</td>
-            <td class="${v.off    > 0 ? '' : 'dim'}">${fmt(v.off)}</td>
-            <td class="${v.nobles > 0 ? '' : 'dim'}">${v.nobles}</td>
-            <td>${v.cats}</td>
-            <td>${v.rams}</td>
+            ${cell(v.off,    'off')}
+            ${cell(v.nobles, 'nobles')}
+            ${cell(v.cats,   'cats')}
+            ${cell(v.rams,   'rams')}
             <td><button class="toggle-btn ${excl ? 'disabled' : 'enabled'} excl-btn" data-coord="${v.coord}"
                 title="${excl ? 'Wykluczona z wymienników – kliknij aby przywrócić' : 'Kliknij aby wykluczyć z wymienników'}">
                 ${excl ? '🚫 Wykluczona' : '✔ Aktywna'}</button></td>
@@ -81,6 +87,40 @@ function renderTroops(villages) {
         btn.addEventListener('click', () => _toggleExcluded(btn.dataset.coord));
     });
 
+    const editBtn = document.getElementById('troops-edit-btn');
+    const saveBtn = document.getElementById('troops-save-btn');
+    if (editBtn) editBtn.textContent = _troopsEditMode ? '✕ Anuluj edycję' : '✏ Edytuj ręcznie';
+    if (saveBtn) saveBtn.style.display = _troopsEditMode ? '' : 'none';
+
     show('troops-summary-card');
     show('troops-table-card');
+}
+
+function toggleTroopsEdit() {
+    _troopsEditMode = !_troopsEditMode;
+    renderTroops(_lastTroops);
+}
+
+async function saveTroopsEdits() {
+    const inputs = document.querySelectorAll('.troop-edit-input');
+    const byCoord = {};
+    inputs.forEach(inp => {
+        const coord = inp.dataset.coord;
+        if (!byCoord[coord]) byCoord[coord] = { coord };
+        byCoord[coord][inp.dataset.field] = parseInt(inp.value) || 0;
+    });
+    const patches = Object.values(byCoord);
+    const status = document.getElementById('troops-status');
+    setStatus(status, 'Zapisywanie…');
+    try {
+        const res  = await fetch('/api/troops/patch', {
+            method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ patches }),
+        });
+        const data = await res.json();
+        if (!res.ok) { setStatus(status, data.error || 'Błąd serwera', 'err'); return; }
+        setStatus(status, '✓ Zapisano.', 'ok');
+        _troopsEditMode = false;
+        renderTroops(data);
+    } catch { setStatus(status, 'Błąd połączenia', 'err'); }
 }

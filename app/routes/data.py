@@ -2,7 +2,7 @@
 from flask import Blueprint, jsonify, request
 
 from ..fetcher import fetch_village_ids as _fetch_ids
-from ..parser import parse_targets, parse_troops
+from ..parser import parse_targets, parse_troops, NOBLE_KEY, CAT_KEY, RAM_KEY
 from ..storage import (
     BURST_TARGETS_FILE,
     EXCLUDED_REPLACEMENTS_FILE,
@@ -32,6 +32,35 @@ def save_troops():
     villages = parse_troops(raw)
     save_json(TROOPS_FILE, villages)
     return jsonify({"count": len(villages), "villages": villages})
+
+
+@bp.patch("/api/troops/patch")
+def patch_troops():
+    """Apply manual edits to specific fields for specific villages."""
+    patches = (request.json or {}).get("patches", [])
+    villages = load_json(TROOPS_FILE)
+    if not isinstance(villages, list):
+        return jsonify({"error": "Brak danych wojsk."}), 400
+    by_coord = {v["coord"]: v for v in villages}
+    for p in patches:
+        coord = p.get("coord")
+        if coord not in by_coord:
+            continue
+        v = by_coord[coord]
+        if "nobles" in p:
+            v["nobles"] = int(p["nobles"])
+            v.setdefault("troops", {})[NOBLE_KEY] = int(p["nobles"])
+        if "cats" in p:
+            v["cats"] = int(p["cats"])
+            v.setdefault("troops", {})[CAT_KEY] = int(p["cats"])
+        if "rams" in p:
+            v["rams"] = int(p["rams"])
+            v.setdefault("troops", {})[RAM_KEY] = int(p["rams"])
+        if "off" in p:
+            v["off_manual"] = int(p["off"])
+            v["off"] = int(p["off"])
+    save_json(TROOPS_FILE, villages)
+    return jsonify(load_troops())
 
 
 # ── Targets ───────────────────────────────────────────────────────────────────

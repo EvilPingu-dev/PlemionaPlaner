@@ -121,7 +121,11 @@ void 0;</pre>
         <div class="summary-grid" id="troops-summary"></div>
     </div>
     <div class="card" id="troops-table-card" style="display:none">
-        <h2>Wioski (<span id="troops-count">0</span>)</h2>
+        <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.5rem">
+            <h2 style="margin:0">Wioski (<span id="troops-count">0</span>)</h2>
+            <button class="btn btn-sm" id="troops-edit-btn" onclick="toggleTroopsEdit()">✏ Edytuj ręcznie</button>
+            <button class="btn btn-sm btn-success" id="troops-save-btn" onclick="saveTroopsEdits()" style="display:none">💾 Zapisz zmiany</button>
+        </div>
         <div class="table-wrap">
             <table id="troops-table">
                 <thead><tr>

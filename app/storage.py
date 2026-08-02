@@ -95,5 +95,5 @@ def load_troops() -> list:
         primary = sum(troops.get(k, 0) * FARM_SPACE.get(k, 1) for k in OFF_KEYS)
         # cats only count when the village is offensive (same rule as parse_troops)
         cats_bonus = troops.get(CAT_KEY, 0) * FARM_SPACE[CAT_KEY] if primary > 0 else 0
-        v["off"] = primary + cats_bonus
+        v["off"] = v.get("off_manual") if v.get("off_manual") is not None else primary + cats_bonus
     return villages
