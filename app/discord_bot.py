@@ -144,13 +144,26 @@ class ReminderBot(discord.Client):
                 f"🟢 **Planer Akcji – {action}** online. "
                 f"Przypomnienia {self.reminder_mins} min przed wysyłką."
             )
-        self.loop.create_task(self._schedule_loop())
+        self._loop_task = self.loop.create_task(self._schedule_loop())
+
+    async def close(self):
+        task = getattr(self, '_loop_task', None)
+        if task and not task.done():
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
+        await super().close()
 
     async def _schedule_loop(self):
         """Re-check the plan every 60 s and schedule any new reminders."""
         while not self.is_closed():
             await self._refresh_reminders()
-            await asyncio.sleep(60)
+            try:
+                await asyncio.sleep(60)
+            except asyncio.CancelledError:
+                break
 
     async def _refresh_reminders(self):
         now     = datetime.now()
@@ -225,7 +238,11 @@ def start_bot(token: str, channel_id: int, reminder_mins: int) -> None:
 def stop_bot() -> None:
     global _bot_client, _bot_loop, _bot_thread
     if _bot_client and _bot_loop and not _bot_loop.is_closed():
-        asyncio.run_coroutine_threadsafe(_bot_client.close(), _bot_loop)
+        future = asyncio.run_coroutine_threadsafe(_bot_client.close(), _bot_loop)
+        try:
+            future.result(timeout=5)
+        except Exception:
+            pass
     _bot_client = None
     _bot_loop   = None
     _bot_thread = None
