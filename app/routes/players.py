@@ -106,10 +106,19 @@ def auto_fetch_player_map():
         save_json(TARGET_OWNERS_FILE, result.get("target_owner_map", {}))
         save_json(PLAYER_POINTS_FILE, result.get("player_points", {}))
         save_json(TARGET_POINTS_FILE, result.get("target_points", {}))
+        # Patch targets.json with fetched points (only where not manually set)
+        from ..storage import TARGETS_FILE
+        targets = load_json(TARGETS_FILE) or []
+        tp = result.get("target_points", {})
+        for t in targets:
+            if not t.get("points") and t.get("coord") in tp:
+                t["points"] = tp[t["coord"]]
+        save_json(TARGETS_FILE, targets)
         return jsonify({
             "count":       len(new_map),
             "player_map":  new_map,
             "village_ids": result["village_id_map"],
+            "targets":     targets,
         })
     except Exception as exc:
         return jsonify({"error": f"Błąd pobierania z TW: {exc}"}), 500

@@ -12,6 +12,7 @@ async function fetchPlayersFromTW() {
         setStatus(status, `✓ Pobrano ${data.count} graczy z TW.`, 'ok');
         renderPlayers(data.player_map);
         document.getElementById('players-input').value = buildPlayersText(data.player_map);
+        if (data.targets && data.targets.length) renderTargets(data.targets);
     } catch { setStatus(status, 'Błąd połączenia', 'err'); }
 }
 
