@@ -151,7 +151,7 @@ def run_plan():
         burst_targets=burst_targets,
         off_noble_gap_minutes=float(settings.get("off_noble_gap_minutes", 1)),
         player_points=player_points,
-        min_morale=float(settings.get("min_morale", 0)) / 100.0,
+        min_morale=float(settings.get("min_morale", 100)) / 100.0,
     )
     plan_data = {
         "assignments":       assignments,
