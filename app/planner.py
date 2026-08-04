@@ -278,6 +278,33 @@ def plan_action(
                     if enemy_owner:
                         enemy_player_friendly.setdefault(enemy_owner, set()).add(fp)
                         already_on_enemy.add(fp)
+
+        # Attach all off villages from noble players to this target.
+        # Noble village's own off is always included; other player offs get same priority.
+        if c2p and chosen_nobles:
+            noble_players = {c2p.get(nv["coord"]) for nv in chosen_nobles if c2p.get(nv["coord"])}
+            for v in off_pool:
+                if v["coord"] in used_off_coords:
+                    continue
+                fp = c2p.get(v["coord"])
+                if fp not in noble_players:
+                    continue
+                dist_v = _dist(v["x"], v["y"], tx, ty)
+                if max_off_dist > 0 and dist_v > max_off_dist:
+                    continue
+                if min_off_dist > 0 and dist_v < min_off_dist:
+                    continue
+                if block_night_sends and is_night_send(dist_v, _eff_off_speed(v, off_speed, ram_speed), t_arrival):
+                    continue
+                if not _morale_ok(v["coord"]):
+                    continue
+                chosen_offs.append(v)
+                used_off_coords.add(v["coord"])
+                picked_for_target.add(fp)
+                if enemy_owner:
+                    enemy_player_friendly.setdefault(enemy_owner, set()).add(fp)
+                    already_on_enemy.add(fp)
+
         offs_detail = [
             {
                 "coord":    v["coord"],
