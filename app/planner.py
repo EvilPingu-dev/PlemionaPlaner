@@ -281,36 +281,13 @@ def plan_action(
                         enemy_player_friendly.setdefault(enemy_owner, set()).add(fp)
                         already_on_enemy.add(fp)
 
-        # Attach off villages from noble players to this target.
-        # The noble village's own off always accompanies its nobles.
-        # Other off villages of the same player only fill remaining offs_needed slots.
-        if c2p and chosen_nobles:
-            noble_players = {c2p.get(nv["coord"]) for nv in chosen_nobles if c2p.get(nv["coord"])}
-            noble_village_coords = {nv["coord"] for nv in chosen_nobles}
-            for v in off_pool:
-                if v["coord"] in used_off_coords:
-                    continue
-                fp = c2p.get(v["coord"])
-                if fp not in noble_players:
-                    continue
-                dist_v = _dist(v["x"], v["y"], tx, ty)
-                if max_off_dist > 0 and dist_v > max_off_dist:
-                    continue
-                if min_off_dist > 0 and dist_v < min_off_dist:
-                    continue
-                if block_night_sends and is_night_send(dist_v, _eff_off_speed(v, off_speed, ram_speed), t_arrival):
-                    continue
-                if not _morale_ok(v["coord"]):
-                    continue
-                # Non-noble villages only fill remaining slots; noble village itself always goes
-                if v["coord"] not in noble_village_coords and len(chosen_offs) >= t["offs_needed"]:
-                    continue
-                chosen_offs.append(v)
-                used_off_coords.add(v["coord"])
-                picked_for_target.add(fp)
-                if enemy_owner:
-                    enemy_player_friendly.setdefault(enemy_owner, set()).add(fp)
-                    already_on_enemy.add(fp)
+        # Noble village's off is part of the noble train (mass commander splits it).
+        # Mark it as used so it can't be double-booked as a standalone off elsewhere.
+        if chosen_nobles:
+            _off_coords = {v["coord"] for v in off_pool}
+            for nv in chosen_nobles:
+                if nv["coord"] in _off_coords:
+                    used_off_coords.add(nv["coord"])
 
         offs_detail = [
             {
@@ -323,14 +300,20 @@ def plan_action(
             }
             for v in chosen_offs
         ]
-        nobles_detail = [
-            {
-                "coord":    v["coord"],
-                "dist":     round(_dist(v["x"], v["y"], tx, ty), 1),
-                "is_night": is_night_send(_dist(v["x"], v["y"], tx, ty), noble_speed, t_arrival),
+        from collections import Counter as _Counter
+        _noble_coord_counts = _Counter(nv["coord"] for nv in chosen_nobles)
+        _off_by_coord = {v["coord"]: v["off"] for v in off_pool}
+        nobles_detail = []
+        for nv in chosen_nobles:
+            _d = round(_dist(nv["x"], nv["y"], tx, ty), 1)
+            _nd: dict = {
+                "coord":    nv["coord"],
+                "dist":     _d,
+                "is_night": is_night_send(_d, noble_speed, t_arrival),
             }
-            for v in chosen_nobles
-        ]
+            if nv["coord"] in _off_by_coord:
+                _nd["off_split"] = round(_off_by_coord[nv["coord"]] / _noble_coord_counts[nv["coord"]])
+            nobles_detail.append(_nd)
 
         assignments.append(
             {
