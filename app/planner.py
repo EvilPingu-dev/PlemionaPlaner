@@ -282,12 +282,16 @@ def plan_action(
                         already_on_enemy.add(fp)
 
         # Noble village's off is part of the noble train (mass commander splits it).
-        # Mark it as used so it can't be double-booked as a standalone off elsewhere.
+        # Mark it as used and remove it from chosen_offs if it snuck in during off selection.
         if chosen_nobles:
             _off_coords = {v["coord"] for v in off_pool}
+            _noble_off_coords: set[str] = set()
             for nv in chosen_nobles:
                 if nv["coord"] in _off_coords:
                     used_off_coords.add(nv["coord"])
+                    _noble_off_coords.add(nv["coord"])
+            if _noble_off_coords:
+                chosen_offs = [v for v in chosen_offs if v["coord"] not in _noble_off_coords]
 
         offs_detail = [
             {
