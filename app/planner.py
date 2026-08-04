@@ -114,6 +114,8 @@ def plan_action(
 
     off_pool = sorted(
         [v for v in villages if v["off"] > 0 and v["coord"] not in skip
+         and v.get("troops", {}).get("axe", 0) > 0
+         and v.get("troops", {}).get("light", 0) > 0
          and (min_off <= 0 or v["off"] >= min_off)],
         key=lambda v: -v["off"],
     )
@@ -279,10 +281,12 @@ def plan_action(
                         enemy_player_friendly.setdefault(enemy_owner, set()).add(fp)
                         already_on_enemy.add(fp)
 
-        # Attach all off villages from noble players to this target.
-        # Noble village's own off is always included; other player offs get same priority.
+        # Attach off villages from noble players to this target.
+        # The noble village's own off always accompanies its nobles.
+        # Other off villages of the same player only fill remaining offs_needed slots.
         if c2p and chosen_nobles:
             noble_players = {c2p.get(nv["coord"]) for nv in chosen_nobles if c2p.get(nv["coord"])}
+            noble_village_coords = {nv["coord"] for nv in chosen_nobles}
             for v in off_pool:
                 if v["coord"] in used_off_coords:
                     continue
@@ -297,6 +301,9 @@ def plan_action(
                 if block_night_sends and is_night_send(dist_v, _eff_off_speed(v, off_speed, ram_speed), t_arrival):
                     continue
                 if not _morale_ok(v["coord"]):
+                    continue
+                # Non-noble villages only fill remaining slots; noble village itself always goes
+                if v["coord"] not in noble_village_coords and len(chosen_offs) >= t["offs_needed"]:
                     continue
                 chosen_offs.append(v)
                 used_off_coords.add(v["coord"])
@@ -472,11 +479,10 @@ def plan_action(
         fn_needed     = ft.get("fake_nobles", 0)
         ft_arrival    = random.choice(_slot_dts) if _slot_dts else arrival_datetime
 
-        # Fake offs: unused villages with rams or cats, no night send, no send-time conflict
+        # Fake offs: villages with rams or cats; off villages are eligible (keep ~100 for fake)
         fake_pool = sorted(
             [v for v in villages
              if v["coord"] not in skip
-             and v["coord"] not in used_off_coords
              and v["coord"] not in used_burst_coords
              and v["coord"] not in used_fake_coords
              and (v.get("rams", 0) > 0 or v.get("cats", 0) > 0)
