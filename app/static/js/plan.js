@@ -767,3 +767,56 @@ async function swapCoord(aIdx, key, oldCoord, newCoord, targetCoord) {
         _renderAssignments(_currentAssignments, _planEditMode);
     } catch { alert('Błąd połączenia.'); }
 }
+
+async function checkTroops() {
+    const btn = document.getElementById('btn-check-troops');
+    const msg = document.getElementById('plan-status');
+    btn.disabled = true;
+    setStatus(msg, 'Sprawdzam wojska…');
+    try {
+        const res  = await fetch('/api/plan/check-troops', { method: 'POST' });
+        const data = await res.json();
+        if (!res.ok) { setStatus(msg, data.error || 'Błąd.', true); return; }
+
+        const { replaced, not_replaced, plan } = data;
+        if (plan?.assignments) {
+            _currentAssignments = plan.assignments;
+            _renderAssignments(_currentAssignments, _planEditMode);
+        }
+
+        const total = (replaced?.length || 0) + (not_replaced?.length || 0);
+        if (total === 0) {
+            setStatus(msg, '✅ Wszystkie wioski są OK.');
+            return;
+        }
+
+        // Build report in modal
+        let html = '';
+        if (replaced?.length) {
+            html += `<h4 style="color:#4ec97a">✅ Zastąpione (${replaced.length})</h4><ul style="margin:.5rem 0 1rem;padding-left:1.2rem">`;
+            for (const r of replaced) {
+                const icon = r.type === 'off' ? '⚔' : '👑';
+                html += `<li>${icon} <b>${r.target}</b>: <span style="color:#e06060">${r.old}</span> → <span style="color:#4ec97a">${r.new}</span></li>`;
+            }
+            html += '</ul>';
+        }
+        if (not_replaced?.length) {
+            html += `<h4 style="color:#e06060">❌ Nie zastąpione (${not_replaced.length})</h4><ul style="margin:.5rem 0;padding-left:1.2rem">`;
+            for (const r of not_replaced) {
+                const icon = r.type === 'off' ? '⚔' : '👑';
+                html += `<li>${icon} <b>${r.target}</b>: ${r.coord} – <span style="color:#aaa">${r.reason}</span></li>`;
+            }
+            html += '</ul>';
+        }
+        document.getElementById('check-troops-body').innerHTML = html;
+        show('check-troops-modal');
+        setStatus(msg, `🔍 ${replaced?.length || 0} zastąpiono, ${not_replaced?.length || 0} nie udało się.`);
+    } catch (e) {
+        setStatus(msg, 'Błąd połączenia.', true);
+    } finally {
+        btn.disabled = false;
+    }
+}
+
+document.getElementById('btn-check-troops')?.addEventListener('click', checkTroops);
+document.getElementById('btn-check-troops-close')?.addEventListener('click', () => hide('check-troops-modal'));

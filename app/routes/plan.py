@@ -5,6 +5,7 @@ from flask import Blueprint, jsonify, request
 
 from ..planner import _dist, is_night_send, plan_action
 from ..storage import (
+    ATTACK_STATUS_FILE,
     BURST_TARGETS_FILE,
     CONFLICTS_FILE,
     FAKE_TARGETS_FILE,
@@ -495,3 +496,179 @@ def plan_override():
     existing["assignments"] = assignments
     save_json(PLAN_FILE, existing)
     return jsonify({"ok": True})
+
+
+@bp.post("/api/plan/check-troops")
+def check_troops():
+    """
+    Re-validate the saved plan against fresh troop data.
+    Replaces villages that no longer have the required troops or can no longer
+    reach the target in time. Does not reshuffle the whole plan.
+    Returns the updated plan plus a report of replacements and failures.
+    """
+    from datetime import timedelta
+
+    SEND_BUFFER_MIN = 3  # minimum minutes left before send deadline
+
+    plan        = load_json(PLAN_FILE)
+    villages    = load_troops()
+    settings    = load_settings()
+    player_map  = load_json(PLAYER_MAP_FILE)
+    status_map  = load_json(ATTACK_STATUS_FILE) or {}
+
+    if not isinstance(plan, dict) or not plan.get("assignments"):
+        return jsonify({"error": "Brak rozpiski."}), 400
+
+    assignments = plan.get("assignments", [])
+    off_speed   = float(settings.get("off_speed",   18))
+    ram_speed   = float(settings.get("ram_speed",   30))
+    noble_speed = float(settings.get("noble_speed", 35))
+    now = datetime.utcnow()
+
+    def _sid(coord: str, target: str, atype: str, idx: int) -> str:
+        return f"{coord}\u2192{target}:{atype}#{idx}"
+
+    village_by_coord: dict[str, dict] = {v["coord"]: v for v in villages}
+
+    disabled: set[str] = set()
+    for pm in player_map:
+        if not pm.get("enabled", True):
+            disabled.update(pm.get("villages", []))
+
+    # Track available nobles per village (consumed as replacements are made)
+    available_nobles: dict[str, int] = {v["coord"]: v.get("nobles", 0) for v in villages}
+
+    # All coords currently booked across the whole plan
+    used_off_coords:   set[str] = set()
+    used_noble_coords: set[str] = set()
+    for a in assignments:
+        used_off_coords.update(a.get("offs", []))
+        used_noble_coords.update(a.get("nobles", []))
+
+    def _eff_speed(v: dict) -> float:
+        return ram_speed if v.get("rams", 0) > 0 else off_speed
+
+    def _can_reach(v_coord: str, tx: int, ty: int, speed: float, arrival_dt: datetime | None) -> bool:
+        if arrival_dt is None:
+            return True
+        v = village_by_coord.get(v_coord)
+        if not v:
+            return False
+        travel_min = _dist(v["x"], v["y"], tx, ty) * speed
+        return (arrival_dt - timedelta(minutes=travel_min)) > now + timedelta(minutes=SEND_BUFFER_MIN)
+
+    def _valid_off(coord: str) -> bool:
+        v = village_by_coord.get(coord)
+        if not v:
+            return False
+        t = v.get("troops", {})
+        return t.get("axe", 0) > 0 and t.get("light", 0) > 0
+
+    def _valid_noble(coord: str) -> bool:
+        return available_nobles.get(coord, 0) > 0
+
+    replaced:     list[dict] = []
+    not_replaced: list[dict] = []
+
+    for a in assignments:
+        tcoord = a["target"]
+        tx, ty = map(int, tcoord.split("|"))
+
+        off_arrival = noble_arrival = None
+        try:
+            if a.get("arrival_dt"):
+                off_arrival = datetime.fromisoformat(a["arrival_dt"])
+            if a.get("noble_arrival_dt"):
+                noble_arrival = datetime.fromisoformat(a["noble_arrival_dt"])
+            elif off_arrival:
+                noble_arrival = off_arrival
+        except ValueError:
+            pass
+
+        # ── Check offs ─────────────────────────────────────────────────────
+        _occ: dict[str, int] = {}
+        for i, coord in enumerate(a.get("offs", [])):
+            _occ[coord] = _occ.get(coord, -1) + 1
+            # Skip attacks already sent
+            if status_map.get(_sid(coord, tcoord, "OFF", _occ[coord])) == "sent":
+                continue
+            ok_troops = _valid_off(coord)
+            ok_time   = _can_reach(coord, tx, ty, _eff_speed(village_by_coord.get(coord, {})), off_arrival)
+            if ok_troops and ok_time:
+                continue
+            reason = "brak axe/light" if not ok_troops else "za mało czasu"
+
+            # Build replacement candidates: not in any off assignment, has troops, reachable
+            cands = sorted(
+                [v for v in villages
+                 if v["coord"] not in used_off_coords
+                 and v["coord"] not in disabled
+                 and _valid_off(v["coord"])
+                 and _can_reach(v["coord"], tx, ty, _eff_speed(v), off_arrival)],
+                key=lambda v: _dist(v["x"], v["y"], tx, ty),
+            )
+            if cands:
+                new_v      = cands[0]
+                new_coord  = new_v["coord"]
+                used_off_coords.discard(coord)
+                used_off_coords.add(new_coord)
+                a["offs"][i] = new_coord
+                if a.get("offs_detail") and i < len(a["offs_detail"]):
+                    spd = _eff_speed(new_v)
+                    d   = round(_dist(new_v["x"], new_v["y"], tx, ty), 1)
+                    a["offs_detail"][i] = {"coord": new_coord, "dist": d, "speed": spd,
+                                           "off": new_v["off"], "is_night": False}
+                replaced.append({"target": tcoord, "type": "off", "old": coord, "new": new_coord})
+            else:
+                not_replaced.append({"target": tcoord, "type": "off", "coord": coord, "reason": reason})
+
+        # ── Check nobles ───────────────────────────────────────────────────
+        _nocc: dict[str, int] = {}
+        for i, coord in enumerate(a.get("nobles", [])):
+            _nocc[coord] = _nocc.get(coord, -1) + 1
+            if status_map.get(_sid(coord, tcoord, "SZLACHCIC", _nocc[coord])) == "sent":
+                continue
+            ok_troops = _valid_noble(coord)
+            ok_time   = _can_reach(coord, tx, ty, noble_speed, noble_arrival)
+            if ok_troops and ok_time:
+                continue
+            reason = "brak szlachcica" if not ok_troops else "za mało czasu"
+
+            cands = sorted(
+                [v for v in villages
+                 if v["coord"] not in used_noble_coords
+                 and v["coord"] not in disabled
+                 and available_nobles.get(v["coord"], 0) > 0
+                 and _can_reach(v["coord"], tx, ty, noble_speed, noble_arrival)],
+                key=lambda v: _dist(v["x"], v["y"], tx, ty),
+            )
+            if cands:
+                new_v     = cands[0]
+                new_coord = new_v["coord"]
+                available_nobles[coord]     = max(0, available_nobles.get(coord, 0) - 0)  # freed
+                available_nobles[new_coord] = available_nobles.get(new_coord, 0) - 1
+                used_noble_coords.discard(coord)
+                used_noble_coords.add(new_coord)
+                a["nobles"][i] = new_coord
+                if a.get("nobles_detail") and i < len(a["nobles_detail"]):
+                    d = round(_dist(new_v["x"], new_v["y"], tx, ty), 1)
+                    a["nobles_detail"][i] = {"coord": new_coord, "dist": d, "is_night": False}
+                replaced.append({"target": tcoord, "type": "noble", "old": coord, "new": new_coord})
+            else:
+                not_replaced.append({"target": tcoord, "type": "noble", "coord": coord, "reason": reason})
+
+    # Recompute missing counts
+    for a in assignments:
+        a["offs_missing"]   = max(0, a.get("offs_needed",   0) - len(a.get("offs",   [])))
+        a["nobles_missing"] = max(0, a.get("nobles_needed", 0) - len(a.get("nobles", [])))
+
+    plan["assignments"] = assignments
+    if replaced or not_replaced:
+        save_json(PLAN_FILE, plan)
+
+    return jsonify({
+        "plan":         plan,
+        "replaced":     replaced,
+        "not_replaced": not_replaced,
+    })
+
