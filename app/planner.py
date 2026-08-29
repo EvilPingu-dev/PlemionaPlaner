@@ -63,8 +63,9 @@ def plan_action(
     burst_targets: list | None = None,
     off_noble_gap_minutes: float = 0.0,
     player_points: dict | None = None,   # player_name → total points (from pop sum)
-    min_morale: float = 0.0,             # 0.0 = no check, 1.0 = require 100% morale
+    min_morale: float = 0.0,             # 0.0 = no check, 1.0 = require 100% morale (standard worlds)
     noble_priority_players: list | None = None,  # always assign nobles to these players first
+    arkadia_attack_range: float = 0.0,   # Arkadia: target must be within ±range% of attacker pts (0 = standard)
 ) -> tuple[list, list, list, dict]:
     """
     Assign offensive villages and nobles to targets.
@@ -149,12 +150,20 @@ def plan_action(
         target_pts = t.get("points", 0)
 
         def _morale_ok(v_coord: str) -> bool:
-            if min_morale <= 0 or target_pts <= 0 or not ppts:
-                return True
             fp = c2p.get(v_coord)
             if not fp:
                 return True
-            return _morale(target_pts, ppts.get(fp, 0)) >= min_morale
+            attacker_pts = ppts.get(fp, 0)
+            if arkadia_attack_range > 0:
+                # Arkadia: target must be within ±range% of attacker's points
+                if attacker_pts <= 0 or target_pts <= 0:
+                    return True
+                ratio = target_pts / attacker_pts
+                r = arkadia_attack_range / 100.0
+                return (1.0 - r) <= ratio <= (1.0 + r)
+            if min_morale <= 0 or target_pts <= 0 or not ppts:
+                return True
+            return _morale(target_pts, attacker_pts) >= min_morale
 
         def _blocked(v_coord: str) -> bool:
             fp = c2p.get(v_coord)

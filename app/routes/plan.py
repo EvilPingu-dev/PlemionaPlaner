@@ -154,6 +154,10 @@ def run_plan():
         player_points=player_points,
         min_morale=float(settings.get("min_morale", 100)) / 100.0,
         noble_priority_players=settings.get("noble_priority_players", []),
+        arkadia_attack_range=(
+            float(settings.get("arkadia_attack_range", 20))
+            if settings.get("world_type") == "arkadia" else 0.0
+        ),
     )
     plan_data = {
         "assignments":       assignments,

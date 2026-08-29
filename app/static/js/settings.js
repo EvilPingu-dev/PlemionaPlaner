@@ -41,6 +41,10 @@ function applySettings(s) {
     document.getElementById('s-action-name').value    = s.action_name  || '';
     document.getElementById('s-window').value          = s.arrival_window_minutes ?? 1;
     document.getElementById('s-server').value          = s.server       || '';
+    const wt = s.world_type || 'standard';
+    document.getElementById('s-world-type').value         = wt;
+    document.getElementById('s-arkadia-range').value      = s.arkadia_attack_range ?? 20;
+    document.getElementById('s-arkadia-range-row').style.display = wt === 'arkadia' ? '' : 'none';
     document.getElementById('s-leader').value          = s.leader_name  || '';
     document.getElementById('s-off-speed').value       = s.off_speed    ?? 18;
     document.getElementById('s-ram-speed').value       = s.ram_speed    ?? 30;
@@ -116,6 +120,8 @@ async function saveSettings() {
         arrival_slots:          slots,
         arrival_window_minutes: parseInt(document.getElementById('s-window').value),
         server:                 document.getElementById('s-server').value,
+        world_type:             document.getElementById('s-world-type').value,
+        arkadia_attack_range:   parseInt(document.getElementById('s-arkadia-range').value) || 20,
         leader_name:            document.getElementById('s-leader').value,
         off_speed:              parseFloat(document.getElementById('s-off-speed').value),
         ram_speed:              parseFloat(document.getElementById('s-ram-speed').value),
@@ -188,3 +194,8 @@ function _fmtTimeMs(isoOrDate) {
     const d = typeof isoOrDate === 'string' ? new Date(isoOrDate) : isoOrDate;
     return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}.${String(d.getMilliseconds()).padStart(3,'0')}`;
 }
+
+document.getElementById('s-world-type')?.addEventListener('change', e => {
+    document.getElementById('s-arkadia-range-row').style.display =
+        e.target.value === 'arkadia' ? '' : 'none';
+});

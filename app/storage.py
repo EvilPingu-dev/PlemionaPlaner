@@ -28,6 +28,8 @@ DEFAULT_SETTINGS: dict = {
     "arrival_window_minutes":  1,
     "off_noble_gap_minutes":   1,      # minutes between off arrival and first noble arrival
     "server":                  "230",
+    "world_type":              "standard",  # standard | arkadia
+    "arkadia_attack_range":    20,           # ±% of own points; grows over time (20→40→70…)
     "leader_name":             "",
     "off_speed":               18,
     "noble_speed":             35,

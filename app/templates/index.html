@@ -604,6 +604,16 @@ void 0;</pre>
             <label>Serwer (np. <code>230</code>, <code>232</code>, <code>arka13</code>)
                 <input type="text" id="s-server" placeholder="230 / arka13">
             </label>
+            <label>Typ świata
+                <select id="s-world-type" class="form-select">
+                    <option value="standard">Standardowy (pl230, pl232…)</option>
+                    <option value="arkadia">Arkadia (arka13…)</option>
+                </select>
+            </label>
+            <label id="s-arkadia-range-row" style="display:none">Zasięg ataku Arkadia (±%)
+                <input type="number" id="s-arkadia-range" value="20" min="1" max="100" step="1" style="width:70px">
+                <span class="hint" style="font-size:.75rem;margin-top:3px">Cel musi mieć ±% punktów atakującego. Zmienia się w czasie: 20→40→70…</span>
+            </label>
             <label>Nick prowadzącego
                 <input type="text" id="s-leader" placeholder="MidnightRain X KRTFL">
             </label>
