@@ -602,14 +602,15 @@ void 0;</pre>
                 <input type="number" id="s-window" value="1" min="1" max="60">
             </label>
             <label>Serwer
-                <input type="text" id="s-server" placeholder="230" list="server-suggestions">
-                <datalist id="server-suggestions">
-                    <option value="230">
-                    <option value="232">
-                    <option value="arka13">
-                    <option value="arka14">
-                    <option value="arka15">
-                </datalist>
+                <select id="s-server" class="form-select">
+                    <option value="230">pl230</option>
+                    <option value="232">pl232</option>
+                    <option value="arka13">Arkadia 13</option>
+                    <option value="arka14">Arkadia 14</option>
+                    <option value="arka15">Arkadia 15</option>
+                    <option value="__custom__">Inne (wpisz ręcznie)…</option>
+                </select>
+                <input type="text" id="s-server-custom" placeholder="np. arka16" style="display:none;margin-top:4px">
             </label>
             <label>Typ świata
                 <select id="s-world-type" class="form-select">

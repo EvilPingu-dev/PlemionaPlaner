@@ -40,7 +40,12 @@ async function loadSettings() {
 function applySettings(s) {
     document.getElementById('s-action-name').value    = s.action_name  || '';
     document.getElementById('s-window').value          = s.arrival_window_minutes ?? 1;
-    document.getElementById('s-server').value          = s.server       || '';
+    const _knownSrv = ['230','232','arka13','arka14','arka15'];
+    const _srv = s.server || '230';
+    const _sel = document.getElementById('s-server');
+    const _cust = document.getElementById('s-server-custom');
+    if (_knownSrv.includes(_srv)) { _sel.value = _srv; _cust.style.display = 'none'; }
+    else { _sel.value = '__custom__'; _cust.value = _srv; _cust.style.display = ''; }
     const wt = s.world_type || 'standard';
     document.getElementById('s-world-type').value         = wt;
     document.getElementById('s-arkadia-range').value      = s.arkadia_attack_range ?? 20;
@@ -119,7 +124,9 @@ async function saveSettings() {
         arrival_datetime,
         arrival_slots:          slots,
         arrival_window_minutes: parseInt(document.getElementById('s-window').value),
-        server:                 document.getElementById('s-server').value,
+        server: document.getElementById('s-server').value === '__custom__'
+                    ? document.getElementById('s-server-custom').value
+                    : document.getElementById('s-server').value,
         world_type:             document.getElementById('s-world-type').value,
         arkadia_attack_range:   parseInt(document.getElementById('s-arkadia-range').value) || 20,
         leader_name:            document.getElementById('s-leader').value,
@@ -198,4 +205,9 @@ function _fmtTimeMs(isoOrDate) {
 document.getElementById('s-world-type')?.addEventListener('change', e => {
     document.getElementById('s-arkadia-range-row').style.display =
         e.target.value === 'arkadia' ? '' : 'none';
+});
+
+document.getElementById('s-server')?.addEventListener('change', e => {
+    const cust = document.getElementById('s-server-custom');
+    cust.style.display = e.target.value === '__custom__' ? '' : 'none';
 });
